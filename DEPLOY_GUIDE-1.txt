@@ -1,0 +1,114 @@
+# 🚀 Partners HUB AI Voice Agent — Deploy Guide
+
+## Aapko milenge 3 files:
+1. partnershub_voice_agent.py  (main code)
+2. requirements.txt            (libraries)
+3. Procfile                    (server config)
+
+═══════════════════════════════════════════════
+## STEP 1: GitHub Account Banao (Free)
+═══════════════════════════════════════════════
+
+1. https://github.com par jaao
+2. Sign up karo (email se)
+3. New Repository banao — naam: "partnershub-agent"
+4. Public rakho
+5. Teeno files upload karo
+
+═══════════════════════════════════════════════
+## STEP 2: Railway.app par Deploy Karo (Free)
+═══════════════════════════════════════════════
+
+1. https://railway.app par jaao
+2. "Start a New Project" click karo
+3. GitHub se login karo
+4. "Deploy from GitHub repo" select karo
+5. Aapka "partnershub-agent" repo select karo
+6. Deploy ho jayega — 2-3 minute mein
+
+═══════════════════════════════════════════════
+## STEP 3: Environment Variables Set Karo
+═══════════════════════════════════════════════
+
+Railway dashboard mein jaao:
+Variables section mein ye add karo:
+
+TWILIO_ACCOUNT_SID    = ACd33059f5270c99399a5f7ce63a8bb644
+TWILIO_API_KEY        = SK5713c71f4ef583c7c2f64dbc230623f1
+TWILIO_API_SECRET     = [aapka Twilio secret]
+TWILIO_FROM_NUMBER    = +917709446589
+OPENAI_API_KEY        = [aapki OpenAI key]
+MANAGER_NUMBER        = +917709446589
+
+═══════════════════════════════════════════════
+## STEP 4: Aapka URL Copy Karo
+═══════════════════════════════════════════════
+
+Railway aapko ek URL dega jaise:
+https://partnershub-agent-production.up.railway.app
+
+Is URL ko copy karo — agle step mein chahiye!
+
+═══════════════════════════════════════════════
+## STEP 5: Twilio Mein URL Set Karo
+═══════════════════════════════════════════════
+
+Twilio Console mein jaao:
+Phone Numbers → Verified Caller IDs
+
+Ya naya number kharido:
+Phone Numbers → Buy a Number
+
+Number ki settings mein:
+Voice & Fax → "A Call Comes In" section:
+URL daalo: https://[aapka-railway-url]/voice
+Method: HTTP POST
+
+═══════════════════════════════════════════════
+## SYSTEM KAISE KAAM KAREGA
+═══════════════════════════════════════════════
+
+1. Aap "Morning Calls" button dabao
+2. System agent ko call karega (Twilio)
+3. Agent uthayega → AI bolega:
+   "Namaskar [Agent Ji]! Main PB Partner ke
+    Prashant Ji ki team bol raha hoon..."
+4. Agent apni problem bolega
+5. AI samjhega aur jawab dega (OpenAI)
+6. Agar agent fase → AI bolega:
+   "Main aapko Prashant Ji se connect karta hoon"
+7. Call aapke (+917709446589) par transfer!
+
+═══════════════════════════════════════════════
+## AI KYA JAANTA HAI (PB Partners Knowledge)
+═══════════════════════════════════════════════
+
+✅ Motor insurance policy process
+✅ Health insurance process
+✅ Life insurance process
+✅ PoSP registration process
+✅ Commission structure
+✅ KYC process
+✅ Claim process
+✅ Renewal process
+✅ Common problems ke solutions
+✅ Agent ki language mein baat (Hindi/Marathi)
+
+═══════════════════════════════════════════════
+## OPENAI KEY KAHAN MILEGI
+═══════════════════════════════════════════════
+
+1. https://platform.openai.com par jaao
+2. Login karo
+3. API Keys section mein jaao
+4. "Create new secret key" click karo
+5. Copy karo → Railway mein paste karo
+
+═══════════════════════════════════════════════
+## HELP CHAHIYE?
+═══════════════════════════════════════════════
+
+Koi bhi step mein problem aaye toh
+screenshot bhejo — main guide kar dunga!
+
+Cost: ZERO (Railway free tier mein chalega)
