@@ -28,7 +28,7 @@ def fetch_interakt_contacts():
     global cached_contacts
     try:
         # Interakt API - contacts list
-        url = "https://api.interakt.ai/v1/public/track/users/"
+        url = "https://api.interakt.ai/v1/public/apis/users/"
         headers = {
             "Authorization": f"Basic {INTERAKT_KEY}",
             "Content-Type": "application/json"
@@ -40,7 +40,7 @@ def fetch_interakt_contacts():
         
         while True:
             params = {"limit": limit, "offset": offset}
-            res = requests.get(url, headers=headers, params=params, timeout=10)
+            res = requests.post(url, headers=headers, params=params, json={}, timeout=10)
             
             if res.status_code == 200:
                 data = res.json()
