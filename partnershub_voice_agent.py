@@ -198,7 +198,7 @@ h2{{color:#00C853;}}
 <h2>Upload Successful!</h2>
 <div class="num">{len(new_contacts)}</div>
 <div style="color:#909090;margin-bottom:20px;">Agents Updated!</div>
-<div class="row"><span>📊 Previous</span><span>{old}</span></div>
+<div class="row"><span>📊 Previous</span><span>{old_count}</span></div>
 <div class="row"><span>✅ New Total</span><span>{len(new_contacts)}</span></div>
 <div class="row"><span>⏭️ Skipped</span><span>{skipped}</span></div>
 <div class="row"><span>🕐 Updated</span><span>{datetime.now().strftime("%d/%m %H:%M")}</span></div>
