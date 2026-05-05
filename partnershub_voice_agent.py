@@ -179,9 +179,9 @@ button{{width:100%;background:#E8521A;border:none;border-radius:12px;padding:15p
         if not new_contacts:
             return '<html><body style="background:#0d0d0d;color:#FF3B3B;font-family:Arial;text-align:center;padding:50px;"><h2>No valid contacts found!</h2><a href="/upload-excel" style="color:#E8521A;">← Try again</a></body></html>'
 
-        global cached_contacts
-        old = len(cached_contacts)
-        cached_contacts = new_contacts
+        old_count = len(cached_contacts)
+        cached_contacts.clear()
+        cached_contacts.extend(new_contacts)
 
         return f'''<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Success!</title>
