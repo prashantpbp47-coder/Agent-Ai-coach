@@ -1,32 +1,39 @@
 #!/usr/bin/env python3
 # ================================================================
-# AGENT GURU — partnershub_voice_agent.py
-# UPDATED: Interakt bypass — 217 agents direct from Excel
-# Incoming + Outgoing calls — Twilio + OpenAI
+# AGENT GURU v2.0 — partnershub_voice_agent.py
+# Excel Auto-Update + Incoming + Outgoing Calls
 # ================================================================
 
 from flask import Flask, request, Response, jsonify
 from twilio.twiml.voice_response import VoiceResponse, Gather, Say, Dial
 from twilio.rest import Client
-import openai, os, json, random, requests, base64
+import openai, os, json, random, io
 from datetime import datetime
+
+try:
+    import pandas as pd
+    EXCEL_OK = True
+except:
+    EXCEL_OK = False
 
 app = Flask(__name__)
 
 # === CONFIG ===
-TWILIO_ACCOUNT_SID  = os.environ.get('TWILIO_ACCOUNT_SID', '')
-TWILIO_API_KEY      = os.environ.get('TWILIO_API_KEY', '')
-TWILIO_API_SECRET   = os.environ.get('TWILIO_API_SECRET', '')
-TWILIO_FROM_NUMBER  = os.environ.get('TWILIO_FROM_NUMBER', '+917709446589')
-OPENAI_API_KEY      = os.environ.get('OPENAI_API_KEY', '')
-MANAGER_NUMBER      = os.environ.get('MANAGER_NUMBER', '+917709446589')
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_API_KEY     = os.environ.get('TWILIO_API_KEY', '')
+TWILIO_API_SECRET  = os.environ.get('TWILIO_API_SECRET', '')
+TWILIO_FROM_NUMBER = os.environ.get('TWILIO_FROM_NUMBER', '+917709446589')
+OPENAI_API_KEY     = os.environ.get('OPENAI_API_KEY', '')
+MANAGER_NUMBER     = os.environ.get('MANAGER_NUMBER', '+917709446589')
+UPLOAD_PASSWORD    = os.environ.get('UPLOAD_PASSWORD', 'agentguru2024')
 
-openai.api_key  = OPENAI_API_KEY
-twilio_client   = Client(TWILIO_API_KEY, TWILIO_API_SECRET, TWILIO_ACCOUNT_SID)
-conversations   = {}
+openai.api_key = OPENAI_API_KEY
+twilio_client  = Client(TWILIO_API_KEY, TWILIO_API_SECRET, TWILIO_ACCOUNT_SID)
+conversations  = {}
 
 # ================================================================
-# 217 AGENTS — NASHIK (Excel se load — Interakt bypass)
+# AGENTS — 217 Nashik Agents
+# /upload-excel se naya Excel upload karo — auto update!
 # ================================================================
 cached_contacts = [
     {'name': 'NIKITA NAMDEV WATPADE', 'phone': '+919823709779', 'agent_id': 'IP218178', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
@@ -39,454 +46,356 @@ cached_contacts = [
     {'name': 'AHER RATNAKAR SACHIN', 'phone': '+919372938587', 'agent_id': 'IP242440', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
     {'name': 'ATHARVA BHAUSAHEB BODKE', 'phone': '+918421701515', 'agent_id': 'IP264207', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
     {'name': 'SANDEEP ASHOK GAIKWAD', 'phone': '+918855858540', 'agent_id': 'IP226792', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Viraj Vaibhav Bhanage', 'phone': '+919823280440', 'agent_id': 'IP249200', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'ANKUSH PANDHARINATH JAGTAP', 'phone': '+918575757875', 'agent_id': 'IP249232', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'NITIN RAMDAS MURTADAK', 'phone': '+918007857492', 'agent_id': 'IP271207', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
+    {'name': 'RAHUL RAOSAHEB MHASKE', 'phone': '+918698064781', 'agent_id': 'IP196304', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
     {'name': 'AMITA SINGH', 'phone': '+916392528473', 'agent_id': 'IP189023', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
     {'name': 'MORE SUDHAKAR BHASKAR', 'phone': '+919423178469', 'agent_id': 'IP234416', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
     {'name': 'SHARAD MURLIDHAR AHER', 'phone': '+919923356981', 'agent_id': 'IP278848', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
     {'name': 'DATTATRAY MADHAVRAO RAUT', 'phone': '+919823369776', 'agent_id': 'IP279116', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
     {'name': 'PRASAD BHAGWAN BHADANGE', 'phone': '+918805267355', 'agent_id': 'IP300604', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
     {'name': 'JYOTI NANDKISHOR KOTHAWADE', 'phone': '+919371525685', 'agent_id': 'IP209632', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'YOGESH VISHANU CHAVAN', 'phone': '+919307290307', 'agent_id': 'IP232087', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SONALI SUBHASH MORE', 'phone': '+918888076776', 'agent_id': 'IP232472', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'BHUSHAN BANSILAL CHAUDHARI', 'phone': '+918411966176', 'agent_id': 'IP232576', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'UMAKANT DATTATRAY BAGUL', 'phone': '+919766850202', 'agent_id': 'IP232618', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHRIKANT ASHOK DESHPANDE', 'phone': '+917721990070', 'agent_id': 'IP299083', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'WAGHCHAURE RAVINDRA MARUTI', 'phone': '+917837222111', 'agent_id': 'IP299622', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'GOKUL DAULAT SINGH BAYAS', 'phone': '+919673567137', 'agent_id': 'IP169958', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHAIKH SALIM SHAIKH HUSEN', 'phone': '+919921146815', 'agent_id': 'IP169962', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VAIBHAV BHASKAR KAUTKAR', 'phone': '+918390822211', 'agent_id': 'IP169966', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MAHADEVI GOKUL BAYAS', 'phone': '+917030961219', 'agent_id': 'IP170196', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Vaibhav Bhausaheb Gaikwad', 'phone': '+919763654214', 'agent_id': 'IP191969', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Sandip Dattatraya Lokhande', 'phone': '+919527922951', 'agent_id': 'IP214002', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Uttam Bajirao Dawkhara', 'phone': '+918010718442', 'agent_id': 'IP236337', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RAJESH BHIMRAO AHER', 'phone': '+919834116505', 'agent_id': 'IP259089', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'BHAGYASHRI VINAY HIRE', 'phone': '+919657742043', 'agent_id': 'IP281162', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PATIL JIJABRAO BHIKAN', 'phone': '+919881521148', 'agent_id': 'IP171907', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SATISH DIGAMBARRAO SHELKE', 'phone': '+919834322175', 'agent_id': 'IP303600', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MANISHA GOKUL WANKHEDE', 'phone': '+919762206575', 'agent_id': 'IP272307', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RATNA AMOL RAUT', 'phone': '+919011917669', 'agent_id': 'IP293595', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'JAGDISH DADAJI PAGARE', 'phone': '+919370035512', 'agent_id': 'IP294024', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SAGAR KESHAV HIWALE', 'phone': '+917030676301', 'agent_id': 'IP315835', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RAHUL MURLIDHAR PATIL', 'phone': '+917620856333', 'agent_id': 'IP182242', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SARTHAK MUKUND MALI', 'phone': '+919970022089', 'agent_id': 'IP182277', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RUSHIKESH S AHIRRAO', 'phone': '+917020375303', 'agent_id': 'IP182887', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Shivani Sanjay Sonawane', 'phone': '+917263909091', 'agent_id': 'IP228012', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Rajendra Dwarkanath Deshpande', 'phone': '+917719016611', 'agent_id': 'IP250227', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'KRISHNA PRAKASH GURUKULE', 'phone': '+917666553561', 'agent_id': 'IP272463', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RUGVED MOHAN KHADILKAR', 'phone': '+917276715028', 'agent_id': 'IP273040', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RAJENDRA VIKAS SOBHAGE', 'phone': '+919960385198', 'agent_id': 'IP294636', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MANOHAR M WANKHEDE', 'phone': '+919860690100', 'agent_id': 'IP205889', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'NIKITA AMEET MULEY', 'phone': '+918055181585', 'agent_id': 'IP251027', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DATTATRYA G WAGH', 'phone': '+919561061421', 'agent_id': 'IP251315', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DATTATRYA G WAGH', 'phone': '+919373978579', 'agent_id': 'IP251326', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'KHADKE SANTOSH MAHADEV', 'phone': '+919403519944', 'agent_id': 'IP295344', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RUPALI SATISHRAO SHELAKE', 'phone': '+919273984200', 'agent_id': 'IP295345', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MULAY VIKAS PRAKASH', 'phone': '+919371988988', 'agent_id': 'IP185604', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PALLAVI RAJKIRAN JAGTAP', 'phone': '+919309986891', 'agent_id': 'IP208625', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DEORE ROHINI BABANRAO', 'phone': '+919011079348', 'agent_id': 'IP297346', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'OMKAR SHIRISH KSHIRSAGAR', 'phone': '+919822257644', 'agent_id': 'IP297416', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHUBHAM VIJAY RAUT', 'phone': '+918600726290', 'agent_id': 'IP184876', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MOIN RIYAJ PATEL', 'phone': '+919657571367', 'agent_id': 'IP207921', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VIJAY MOGAL PAGARE', 'phone': '+918180831802', 'agent_id': 'IP274771', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'NAUSHABA ALZAR SHAIKH', 'phone': '+919028016443', 'agent_id': 'IP274785', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'KIRTI KRISHNA PATANKAR', 'phone': '+919552902506', 'agent_id': 'IP187912', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VILAS CHANDRAKANT KAMBLE', 'phone': '+919822263722', 'agent_id': 'IP210693', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SNEHAL PRAVIN BHOSALE', 'phone': '+918983551978', 'agent_id': 'IP277606', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PANKAJ ANANDA GAWALI', 'phone': '+919921384873', 'agent_id': 'IP298761', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DHIRAJ MAHIPALSING BAIS', 'phone': '+917028187346', 'agent_id': 'IP172255', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PRANAV RAVINDRA LAHAMGE', 'phone': '+917798798795', 'agent_id': 'IP192834', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VISHWAJEET K CHHAJED', 'phone': '+918605725909', 'agent_id': 'IP215487', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PRIYANKA ANIL NIRBHAVANE', 'phone': '+919850646560', 'agent_id': 'IP282300', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MANGESH S CHANDRATRE', 'phone': '+919822247258', 'agent_id': 'IP215990', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PRAVIN MADHUKAR BHOSALE', 'phone': '+919511829113', 'agent_id': 'IP260799', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'ANANT C CHOUDHARI', 'phone': '+918850237271', 'agent_id': 'IP304963', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHIVAJI NIVRUTTI CHAVANKE', 'phone': '+917720031311', 'agent_id': 'IP326198', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'KANIFNATH GOPINATH BAGUL', 'phone': '+918669657799', 'agent_id': 'IP326302', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'BHARATI BHAGAT', 'phone': '+919822391131', 'agent_id': 'IP326569', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'POONAM HARSHWARDHAN NARKE', 'phone': '+919834391762', 'agent_id': 'IP155549', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'KAVITA NARAYAN MONDHE', 'phone': '+919022487313', 'agent_id': 'IP217670', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Anita Hiralal Mahajan', 'phone': '+919422094897', 'agent_id': 'IP262530', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Nikita pavan more', 'phone': '+918626089183', 'agent_id': 'IP262561', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'INDIRA SHANKAR SHINDE', 'phone': '+919823098181', 'agent_id': 'IP283388', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RAJENDRA SHRIDHAR RASAL', 'phone': '+918379920396', 'agent_id': 'IP173879', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DIVYA SAMADHAN GHAYAL', 'phone': '+919561426327', 'agent_id': 'IP193856', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RAHUL JAYPRAKASH NIKAM', 'phone': '+919850202951', 'agent_id': 'IP284195', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RAJKUMAR RAGHUNATH PAGARE', 'phone': '+919890632159', 'agent_id': 'IP328203', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SANDIP M PATIL', 'phone': '+918830018514', 'agent_id': 'IP180924', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'CHETAN MACHHINDRA GANGURDE', 'phone': '+919112099203', 'agent_id': 'IP180975', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DARSHAN MAHENDRA KOTME', 'phone': '+919822017928', 'agent_id': 'IP203882', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'HARSH PRASANNA MAHAJANI', 'phone': '+919225722777', 'agent_id': 'IP203904', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DESALE VRISHABH PRAKASH', 'phone': '+919096708090', 'agent_id': 'IP248341', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VAISHALI SACHIN KHAIRNAR', 'phone': '+919764600068', 'agent_id': 'IP313672', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'GAHIWAD SACHIN PANDURANG', 'phone': '+919372913777', 'agent_id': 'IP314246', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Kalpesh Kumar Sutrave', 'phone': '+917276016993', 'agent_id': 'IP186129', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'KALYANI VISHAL MARATHE', 'phone': '+919763017637', 'agent_id': 'IP186496', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VARIS FIROZ KHAN', 'phone': '+918668211091', 'agent_id': 'IP186511', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SUGANDH RAMESH DEORE', 'phone': '+919322457077', 'agent_id': 'IP186525', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RAJESH Namdev Jadhav', 'phone': '+919763641005', 'agent_id': 'IP209176', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHUBHANGI YOGESH KATARE', 'phone': '+918308368809', 'agent_id': 'IP209303', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHAILENDRA JAIN', 'phone': '+919358825909', 'agent_id': 'IP231675', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RAHUL PADMAKAR CHAVAN', 'phone': '+919890098006', 'agent_id': 'IP298094', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'JYOTI ROHIT NIRBHAVANE', 'phone': '+917020001759', 'agent_id': 'IP170917', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'ANWAR RASHID PINJARI', 'phone': '+919823853289', 'agent_id': 'IP190114', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Rohit Rajendra Patil', 'phone': '+919881959199', 'agent_id': 'IP235723', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHITAL SURAJ JADHAV', 'phone': '+917058157777', 'agent_id': 'IP235847', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DHANASHRI SANDESH BHANDARKAR', 'phone': '+919423900764', 'agent_id': 'IP280637', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'ANITA AVISHKAR PATALPURE', 'phone': '+919860177841', 'agent_id': 'IP302053', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MAKARAND RAMDAS GHEGADMAL', 'phone': '+917058743721', 'agent_id': 'IP346201', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SONAM NITIN CHAVHAN', 'phone': '+918010552489', 'agent_id': 'IP221859', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'ARJUN BAJIRAO MANTE', 'phone': '+919822544892', 'agent_id': 'IP221884', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHIRISH VIJAY KARNIK', 'phone': '+919372601879', 'agent_id': 'IP243978', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'HEMLATA SURYAKANT MALI', 'phone': '+919527487010', 'agent_id': 'IP266566', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SWANAND RAVIKIRAN JOSHI', 'phone': '+919767903046', 'agent_id': 'IP266689', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'OM KIRAN SANGLE', 'phone': '+918087192351', 'agent_id': 'IP288458', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'YOGESH VINAYAK MAHAJAN', 'phone': '+918975877168', 'agent_id': 'IP310047', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHAIKH FARHIN VASIM', 'phone': '+918484888030', 'agent_id': 'IP188626', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VINITA SHRINIWAS JOSHI', 'phone': '+919850260680', 'agent_id': 'IP211414', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PRATHAMESH SANJAY KHARADE', 'phone': '+919322548945', 'agent_id': 'IP211444', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DASHPUTE DHANANJAY RAMESH', 'phone': '+918380094062', 'agent_id': 'IP255906', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DEORE BHARAT GANGADHAR', 'phone': '+918180802050', 'agent_id': 'IP255953', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Aryan Tushar Bhusare', 'phone': '+919420485096', 'agent_id': 'IP366663', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MAHESH KRUSHNA MOTHE', 'phone': '+919825328050', 'agent_id': 'IP287684', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VICKY SHYAMRAO KALE', 'phone': '+919595097096', 'agent_id': 'IP309391', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SANDIP LAXIMAN DALVI', 'phone': '+919402183051', 'agent_id': 'IP176691', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SANJEEV JAGANNATH KHORE', 'phone': '+917774012242', 'agent_id': 'IP177095', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Nilesh  Zade', 'phone': '+919420593999', 'agent_id': 'IP243147', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MANISHA RAMNATH SABALE', 'phone': '+919527855824', 'agent_id': 'IP264846', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SUNITA PRAKASH KSHIRSAGAR', 'phone': '+919823739855', 'agent_id': 'IP265096', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'KOKATE MAYUR ASHOK', 'phone': '+919922303403', 'agent_id': 'IP309012', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'OMKAR UMAKANT BAGUL', 'phone': '+919209928377', 'agent_id': 'IP330991', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SAHANE MANOJ BAJUNATH', 'phone': '+917264856051', 'agent_id': 'IP206940', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SUYOG NAMDEV DIGHOLE', 'phone': '+919881012839', 'agent_id': 'IP207113', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DATTATRAY G LASURE', 'phone': '+919923092637', 'agent_id': 'IP229273', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'GHANSHYAM RAMESH DASHPUTE', 'phone': '+919822723857', 'agent_id': 'IP251721', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PRERANA SHUBHAM ASWARE', 'phone': '+917058753120', 'agent_id': 'IP317896', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DALICHAND PARAKH', 'phone': '+919545804312', 'agent_id': 'IP317964', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DHOTRE GIRISH KANTIRAJ', 'phone': '+917972391607', 'agent_id': 'IP340338', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SANGITA BHARAT MULANE', 'phone': '+919764358811', 'agent_id': 'IP201878', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'JAYASHRI BHIVAJI AHIRE', 'phone': '+918975396483', 'agent_id': 'IP269238', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PRAVIN EKNATH PAGARE', 'phone': '+917843054143', 'agent_id': 'IP313128', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'BAPUSAHEB HIRAMAN GAVLI', 'phone': '+919822490777', 'agent_id': 'IP313338', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RAVINDRA R KALKATTE', 'phone': '+919921286234', 'agent_id': 'IP380263', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHAIKH MOIN AYUB', 'phone': '+918796738030', 'agent_id': 'IP401732', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VINIT CHANDRASHEKHAR WAGHMARE', 'phone': '+919822669462', 'agent_id': 'IP203106', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'CHAVAN JYOTI YOGESH', 'phone': '+917218876054', 'agent_id': 'IP203620', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PUSHPA SANJAY SONAWANE', 'phone': '+919922231222', 'agent_id': 'IP225227', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'NILESH BHIKHA MUSALE', 'phone': '+918275138111', 'agent_id': 'IP247972', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SAHIL AMAN SINGH', 'phone': '+919766946512', 'agent_id': 'IP247999', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'GAHIWAD YOGESH PANDURANG', 'phone': '+919850067228', 'agent_id': 'IP269650', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHIVANI SWAPNIL JOSHI', 'phone': '+919689724799', 'agent_id': 'IP336935', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'ANIL LAXMAN JADHAV', 'phone': '+918080232850', 'agent_id': 'IP196513', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PRADIP JANARDHAN KHAIRNAR', 'phone': '+919730369443', 'agent_id': 'IP218965', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'KAVITA RANJAN BIRARI', 'phone': '+919822820035', 'agent_id': 'IP241277', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'KOTHAWADE KISHOR VASANTRAO', 'phone': '+918551009333', 'agent_id': 'IP395029', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Jayshri Vijay Pagare', 'phone': '+919921727007', 'agent_id': 'IP201054', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Pritika Sachin Aher', 'phone': '+919404738587', 'agent_id': 'IP246020', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'JADHAV DEEPALI MUKTARAM', 'phone': '+919130021564', 'agent_id': 'IP290461', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MODHE SACHIN DILIP', 'phone': '+919921232349', 'agent_id': 'IP422858', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'BEDARKAR DILIP CHANDRKANT', 'phone': '+919922322033', 'agent_id': 'IP325272', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'NIVRUTTI ANURUDDHA GHUGE', 'phone': '+919049596115', 'agent_id': 'IP369458', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SAMADHAN DATTATRAY AHER', 'phone': '+917020663301', 'agent_id': 'IP279470', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PRASHANT BABANRAO LONARI', 'phone': '+917720002093', 'agent_id': 'IP279589', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'WAKALE SAVITA DEVIDAS', 'phone': '+918600059817', 'agent_id': 'IP346112', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SURAJ BABURAO THOMBARE', 'phone': '+918788679876', 'agent_id': 'IP348361', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHRIGOPALRAO VISHNUPANT', 'phone': '+918999148017', 'agent_id': 'IP348609', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VAISHNAVI DHONDIRAM KHATALE', 'phone': '+917588172601', 'agent_id': 'IP370726', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VARSHA SANJAY SHINDE', 'phone': '+918087330545', 'agent_id': 'IP326894', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'JANHAVI TUSHAR TAWARE', 'phone': '+919637475315', 'agent_id': 'IP371568', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PRITI KRUSHNANATH BELEKAR', 'phone': '+919309115821', 'agent_id': 'IP350200', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'ASHWINI KIRAN SHINDE', 'phone': '+919403926500', 'agent_id': 'IP372023', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MANISHA SUNIL SURYAWANSHI', 'phone': '+919763606193', 'agent_id': 'IP350673', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'GAURAV SHIVAJI GHADWAJE', 'phone': '+917030465706', 'agent_id': 'IP394203', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RADHAKISAN KARBHARI CHAUDHARI', 'phone': '+919422942902', 'agent_id': 'IP374141', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'YASMIN ANWAR PINJARI', 'phone': '+918625853289', 'agent_id': 'IP396070', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SANJAY CHINTAMAN SAINDANE', 'phone': '+917249119995', 'agent_id': 'IP375468', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'QAZI MANZOOR IMAMODDIN', 'phone': '+919689597847', 'agent_id': 'IP375612', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'NIKHIL MOHAN GAWALI', 'phone': '+919403117617', 'agent_id': 'IP397447', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SAKSHI SUNIL BHORASKAR', 'phone': '+919075878858', 'agent_id': 'IP419520', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SAKSHI PRAVIN CHAUDHARI', 'phone': '+919860319056', 'agent_id': 'IP419795', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'JANARDAN LOKADI RANKHAMB', 'phone': '+919527577156', 'agent_id': 'IP376903', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'JEEVAN SAMADHAN AHIRE', 'phone': '+918675751999', 'agent_id': 'IP267402', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MANAV DIGAMBAR SONAKAMBALE', 'phone': '+919067167425', 'agent_id': 'IP311143', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'AZAR SHAHABUDDIN SHAIKH', 'phone': '+919823677833', 'agent_id': 'IP355277', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VAIBHAV DADA BORSE', 'phone': '+919270351601', 'agent_id': 'IP399044', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DNYANESHWAR UDDHAVRAO GHATUL', 'phone': '+917030234240', 'agent_id': 'IP399481', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'ANITA PANDURANG DANGRE', 'phone': '+919850172998', 'agent_id': 'IP421502', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VITTHAL ANNA MALI', 'phone': '+919921987985', 'agent_id': 'IP267809', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'BHANUPRIYA JADHAV', 'phone': '+919373339343', 'agent_id': 'IP289757', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'OM SARASWATICHANDRA BORSE', 'phone': '+918830131990', 'agent_id': 'IP378299', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PRACHI SHIVAJI JADHAV', 'phone': '+919529540481', 'agent_id': 'IP335959', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RUPALI RAJENDRA DESHPANDE', 'phone': '+917304352555', 'agent_id': 'IP400993', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MADHURI BALASAHEB FASATE', 'phone': '+918421919370', 'agent_id': 'IP293347', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'DIPALI RAHUL SUMANT', 'phone': '+919225656001', 'agent_id': 'IP337791', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MANOHAR BHAGAWAN PATIL', 'phone': '+919890997204', 'agent_id': 'IP359802', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'KIRAN BALANATH AHIRE', 'phone': '+918805711703', 'agent_id': 'IP403330', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Disha Shashikant pawar', 'phone': '+917020261629', 'agent_id': 'IP316282', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VISHWAJIT RAMDAS SANGALE', 'phone': '+919767926831', 'agent_id': 'IP339093', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MONAL YASHPAL RAJPUT', 'phone': '+919822813225', 'agent_id': 'IP360358', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Shahrukh Shaizad Sajid Kaleem Ansari', 'phone': '+918888333564', 'agent_id': 'IP360513', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'Abdul ahaad iftekhar shaikh', 'phone': '+917038204286', 'agent_id': 'IP383709', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PATHAN SHAHEZAD KHAN AFSAR KHAN', 'phone': '+919307032121', 'agent_id': 'IP319512', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SANDHYA RAHUL KOLI', 'phone': '+919370454233', 'agent_id': 'IP319551', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'ASHWINI KIRAN SHINDE', 'phone': '+919209769005', 'agent_id': 'IP406844', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'MANOJ ARJUNDAS MANGARMALANI', 'phone': '+919225119578', 'agent_id': 'IP407767', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'VAISHNAVI JANARDAN RANKHAMB', 'phone': '+917822069006', 'agent_id': 'IP386706', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'NARENDRA S NIKUMBHE', 'phone': '+919823620334', 'agent_id': 'IP408105', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'ANIKET BALU NIRBHAVANE', 'phone': '+918010342676', 'agent_id': 'IP408412', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'ASHOK PRALHAD BHISE', 'phone': '+919175937946', 'agent_id': 'IP386356', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'KRUSHNA VASANT JADHAV', 'phone': '+917588103593', 'agent_id': 'IP322818', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'PAWAN SURESH PATIL', 'phone': '+917420994235', 'agent_id': 'IP322984', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SAYYED MUDASSARALI MAHEFUJALI', 'phone': '+918805636443', 'agent_id': 'IP323029', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHRUNJAL BHAGWAN DEOGHARE', 'phone': '+919175500764', 'agent_id': 'IP411700', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'RAJ ASHOK AHIRE', 'phone': '+918421023517', 'agent_id': 'IP343939', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SHRADDHA ALANKAR WAGHMARE', 'phone': '+919422694669', 'agent_id': 'IP365849', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'ANKUSH SHANTARAM DHAGE', 'phone': '+917588625986', 'agent_id': 'IP366042', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'SADANAND MOTIRAM PANDAV', 'phone': '+917448285872', 'agent_id': 'IP388171', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'CHAITALI MANOJ THORAT', 'phone': '+919823560031', 'agent_id': 'IP388501', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
-    {'name': 'THORAT GANESH MANOJ', 'phone': '+919665181576', 'agent_id': 'IP388504', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
+    {'name': 'ANKUSH PANDHARINATH JAGTAP', 'phone': '+918575757875', 'agent_id': 'IP249232', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
+    {'name': 'NITIN RAMDAS MURTADAK', 'phone': '+918007857492', 'agent_id': 'IP271207', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
+    {'name': 'Viraj Vaibhav Bhanage', 'phone': '+919823280440', 'agent_id': 'IP249200', 'rm': 'Prashant Dinkar Chandratre', 'city': 'Nashik'},
 ]
-# Total: 217 agents — Nashik
+# NOTE: Puri 217 agents list ke liye /upload-excel pe Excel upload karein
 
 # ================================================================
-# HELPER: Phone number se agent dhundho
+# EXCEL UPLOAD PAGE — NEW AGENTS AUTO UPDATE
 # ================================================================
-def find_agent_by_phone(phone):
-    """Incoming call pe caller identify karo"""
-    clean = phone.replace('+91', '').replace('+', '').strip()
-    for agent in cached_contacts:
-        agent_clean = agent['phone'].replace('+91', '').strip()
-        if clean == agent_clean or clean[-10:] == agent_clean[-10:]:
-            return agent
-    return None
+@app.route('/upload-excel', methods=['GET', 'POST'])
+def upload_excel():
+    if request.method == 'GET':
+        return f'''<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Agent Guru — Excel Upload</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box;}}
+body{{font-family:Arial,sans-serif;background:#0d0d0d;color:#F0F0F0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}}
+.card{{background:#1c1c1c;border:1px solid rgba(232,82,26,.3);border-radius:20px;padding:32px;width:100%;max-width:480px;}}
+h1{{color:#E8521A;text-align:center;font-size:22px;margin-bottom:4px;}}
+.sub{{text-align:center;color:#909090;font-size:13px;margin-bottom:24px;}}
+.stat-row{{display:flex;gap:10px;margin-bottom:24px;}}
+.stat{{flex:1;background:#252525;border-radius:12px;padding:14px;text-align:center;}}
+.stat-n{{font-size:28px;font-weight:900;color:#E8521A;}}
+.stat-l{{font-size:11px;color:#909090;margin-top:3px;}}
+label{{display:block;font-size:11px;font-weight:700;color:#909090;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}}
+.file-area{{width:100%;background:#252525;border:2px dashed rgba(232,82,26,.4);border-radius:12px;padding:24px;text-align:center;cursor:pointer;margin-bottom:14px;}}
+.file-area:hover{{border-color:#E8521A;}}
+input[type=file]{{display:none;}}
+input[type=password]{{width:100%;background:#252525;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 14px;color:#F0F0F0;font-size:14px;margin-bottom:20px;outline:none;}}
+input[type=password]:focus{{border-color:#E8521A;}}
+button{{width:100%;background:#E8521A;border:none;border-radius:12px;padding:15px;color:#fff;font-size:16px;font-weight:800;cursor:pointer;}}
+.info{{background:#252525;border-radius:10px;padding:14px;margin-top:20px;font-size:12px;color:#909090;}}
+.col{{display:inline-block;background:#1c1c1c;border:1px solid rgba(232,82,26,.2);border-radius:6px;padding:3px 8px;margin:3px;font-size:11px;color:#E8521A;}}
+.links{{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;}}
+.link{{color:#E8521A;text-decoration:none;font-size:12px;padding:6px 12px;background:#252525;border-radius:8px;}}
+</style>
+</head>
+<body>
+<div class="card">
+<div style="font-size:48px;text-align:center;margin-bottom:8px;">📊</div>
+<h1>Agent Guru</h1>
+<p class="sub">Excel Upload — Agents Auto Update</p>
+<div class="stat-row">
+<div class="stat"><div class="stat-n">{len(cached_contacts)}</div><div class="stat-l">Current Agents</div></div>
+<div class="stat"><div class="stat-n">✅</div><div class="stat-l">System Active</div></div>
+</div>
+<form method="POST" enctype="multipart/form-data">
+<label>📎 Excel File Choose करें</label>
+<label class="file-area" for="file-inp">
+<div style="font-size:32px;margin-bottom:8px;">📁</div>
+<div style="font-weight:700;">Click to select file</div>
+<div style="font-size:12px;color:#909090;margin-top:4px;">.xlsx .xls .csv supported</div>
+<input type="file" id="file-inp" name="excel_file" accept=".xlsx,.xls,.csv" required onchange="document.getElementById('fname').textContent=this.files[0].name">
+</label>
+<div id="fname" style="color:#E8521A;font-size:13px;margin-bottom:14px;text-align:center;"></div>
+<label>🔐 Upload Password</label>
+<input type="password" name="password" placeholder="Password enter करें" required>
+<button type="submit">🚀 Upload & Update Agents</button>
+</form>
+<div class="info">
+<strong style="color:#E8521A;">Required Excel Columns:</strong><br>
+<div style="margin-top:6px;">
+<span class="col">PartnerCode</span>
+<span class="col">PartnerName</span>
+<span class="col">PartnerPhoneNumber</span>
+<span class="col">RMName</span>
+<span class="col">RMCity</span>
+</div>
+<div style="margin-top:10px;">💡 New agent add karein Excel mein → Upload karein → System update!</div>
+</div>
+<div class="links">
+<a href="/agents" class="link">👥 View Agents</a>
+<a href="/get-contacts" class="link">📋 JSON Data</a>
+<a href="/" class="link">🏠 Home</a>
+</div>
+</div>
+</body>
+</html>'''
 
-def get_all_contacts():
-    """Saare agents return karo"""
-    return cached_contacts
+    # POST — Process Excel
+    if not EXCEL_OK:
+        return '<h2>Error: pandas not installed. Add to requirements.txt</h2>', 500
+
+    password = request.form.get('password', '')
+    if password != UPLOAD_PASSWORD:
+        return '<html><body style="background:#0d0d0d;color:#FF3B3B;font-family:Arial;text-align:center;padding:50px;"><h2>❌ Wrong Password!</h2><a href="/upload-excel" style="color:#E8521A;">← Back</a></body></html>', 403
+
+    if 'excel_file' not in request.files:
+        return jsonify({'error': 'No file'}), 400
+
+    file = request.files['excel_file']
+    try:
+        file_bytes = file.read()
+        fname = file.filename.lower()
+        df = pd.read_csv(io.BytesIO(file_bytes)) if fname.endswith('.csv') else pd.read_excel(io.BytesIO(file_bytes))
+
+        new_contacts = []
+        skipped = 0
+        for _, row in df.iterrows():
+            name  = str(row.get('PartnerName') or row.get('Name') or '').strip()
+            phone = str(row.get('PartnerPhoneNumber') or row.get('Phone') or row.get('Mobile') or '').strip()
+            code  = str(row.get('PartnerCode') or row.get('Code') or '').strip()
+            rm    = str(row.get('RMName') or row.get('RM') or '').strip()
+            city  = str(row.get('RMCity') or row.get('City') or 'Nashik').strip()
+
+            try:
+                phone_clean = str(int(float(phone)))
+            except:
+                phone_clean = phone.replace(' ','').replace('-','')
+
+            if not phone_clean or len(phone_clean) < 10:
+                skipped += 1
+                continue
+
+            if not phone_clean.startswith('+'):
+                phone_clean = '+91' + phone_clean[-10:]
+
+            new_contacts.append({'name': name, 'phone': phone_clean, 'agent_id': code, 'rm': rm, 'city': city})
+
+        if not new_contacts:
+            return '<html><body style="background:#0d0d0d;color:#FF3B3B;font-family:Arial;text-align:center;padding:50px;"><h2>No valid contacts found!</h2><a href="/upload-excel" style="color:#E8521A;">← Try again</a></body></html>'
+
+        global cached_contacts
+        old = len(cached_contacts)
+        cached_contacts = new_contacts
+
+        return f'''<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Success!</title>
+<style>body{{background:#0d0d0d;color:#F0F0F0;font-family:Arial;text-align:center;padding:40px 20px;}}
+.card{{background:#1c1c1c;border:1px solid rgba(0,200,83,.3);border-radius:20px;padding:32px;max-width:400px;margin:0 auto;}}
+.num{{font-size:64px;font-weight:900;color:#00C853;margin:10px 0;}}
+h2{{color:#00C853;}}
+.row{{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #252525;font-size:14px;text-align:left;}}
+.btn{{display:inline-block;background:#E8521A;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:800;margin:8px 4px;}}
+.btn2{{background:#252525;border:1px solid rgba(255,255,255,.1);}}</style>
+</head>
+<body><div class="card">
+<div style="font-size:48px;">✅</div>
+<h2>Upload Successful!</h2>
+<div class="num">{len(new_contacts)}</div>
+<div style="color:#909090;margin-bottom:20px;">Agents Updated!</div>
+<div class="row"><span>📊 Previous</span><span>{old}</span></div>
+<div class="row"><span>✅ New Total</span><span>{len(new_contacts)}</span></div>
+<div class="row"><span>⏭️ Skipped</span><span>{skipped}</span></div>
+<div class="row"><span>🕐 Updated</span><span>{datetime.now().strftime("%d/%m %H:%M")}</span></div>
+<div style="margin-top:20px;">
+<a href="/upload-excel" class="btn">📤 Upload Again</a>
+<a href="/agents" class="btn btn2">👥 View Agents</a>
+</div>
+</div></body></html>'''
+
+    except Exception as e:
+        return f'<html><body style="background:#0d0d0d;color:#FF3B3B;font-family:Arial;text-align:center;padding:50px;"><h2>❌ Error: {str(e)}</h2><a href="/upload-excel" style="color:#E8521A;">← Try again</a></body></html>'
+
+
+# ================================================================
+# AGENTS LIST PAGE
+# ================================================================
+@app.route('/agents', methods=['GET'])
+def list_agents():
+    search = request.args.get('search', '').lower()
+    filtered = [a for a in cached_contacts if not search or search in a['name'].lower() or search in a['phone']] if search else cached_contacts
+
+    rows = ''.join([f'<tr><td>{i}</td><td><strong>{a["name"]}</strong></td><td style="color:#E8521A;font-family:monospace;">{a["phone"]}</td><td style="color:#909090;font-size:11px;">{a["agent_id"]}</td><td>{a.get("rm","")}</td><td>{a.get("city","")}</td><td><a href="/call-agent/{a["agent_id"]}" style="color:#E8521A;font-size:12px;">📞</a></td></tr>' for i, a in enumerate(filtered, 1)])
+
+    return f'''<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Agents</title>
+<style>body{{background:#0d0d0d;color:#F0F0F0;font-family:Arial;padding:20px;}}
+h1{{color:#E8521A;margin-bottom:4px;}}
+.top{{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}}
+input{{background:#1c1c1c;border:1px solid rgba(232,82,26,.3);border-radius:10px;padding:10px 14px;color:#F0F0F0;font-size:14px;outline:none;flex:1;min-width:200px;}}
+.btn{{background:#E8521A;color:#fff;padding:10px 18px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;white-space:nowrap;}}
+table{{width:100%;border-collapse:collapse;font-size:13px;}}
+th{{background:#1c1c1c;padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;color:#909090;}}
+td{{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.05);}}
+tr:hover td{{background:rgba(232,82,26,.04);}}
+</style></head>
+<body>
+<h1>👥 Agent Guru — Agents ({len(filtered)} of {len(cached_contacts)})</h1>
+<div class="top">
+<input type="text" placeholder="🔍 Search name or phone..." value="{search}" oninput="window.location='/agents?search='+this.value">
+<a href="/upload-excel" class="btn">📤 Upload Excel</a>
+</div>
+<table><thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Code</th><th>RM</th><th>City</th><th>Call</th></tr></thead>
+<tbody>{rows}</tbody></table>
+</body></html>'''
+
 
 # ================================================================
 # API ROUTES
 # ================================================================
-
 @app.route('/', methods=['GET'])
 def home():
     return jsonify({
-        'status': 'Agent Guru Active',
+        'status': 'Agent Guru Active ✅',
+        'version': '2.0 — Excel Auto-Update',
         'total_agents': len(cached_contacts),
-        'message': f'{len(cached_contacts)} agents ready!'
+        'routes': {
+            'GET  /upload-excel': 'Excel upload page — agents auto update',
+            'GET  /agents': 'All agents list (browser)',
+            'GET  /get-contacts': 'Contacts JSON',
+            'POST /add-agent': 'Single agent add {name,phone,password}',
+            'POST /remove-agent': 'Agent remove {phone,password}',
+            'POST /make-call': 'Outgoing call {phone,message}',
+            'POST /call-agent/<id>': 'Call specific agent',
+            'POST /call-all': 'Call all agents {message,limit}',
+            'POST /incoming-call': 'Twilio webhook',
+        }
     })
 
 @app.route('/get-contacts', methods=['GET'])
 def get_contacts():
-    """Sabhi agents ki list"""
-    return jsonify({
-        'contacts': cached_contacts,
-        'total': len(cached_contacts),
-        'message': f'{len(cached_contacts)} agents ready for calling!'
-    })
+    return jsonify({'contacts': cached_contacts, 'total': len(cached_contacts), 'message': f'{len(cached_contacts)} agents ready!'})
+
+@app.route('/add-agent', methods=['POST'])
+def add_agent():
+    data = request.json or {}
+    if data.get('password') != UPLOAD_PASSWORD:
+        return jsonify({'error': 'Wrong password'}), 403
+    phone = str(data.get('phone', '')).strip()
+    if len(phone) == 10: phone = '+91' + phone
+    for a in cached_contacts:
+        if a['phone'] == phone:
+            return jsonify({'error': 'Already exists', 'agent': a}), 409
+    new = {'name': data.get('name',''), 'phone': phone, 'agent_id': data.get('agent_id', 'IP'+str(random.randint(100000,999999))), 'rm': data.get('rm',''), 'city': data.get('city','Nashik')}
+    cached_contacts.append(new)
+    return jsonify({'success': True, 'agent': new, 'total': len(cached_contacts)})
+
+@app.route('/remove-agent', methods=['POST'])
+def remove_agent():
+    global cached_contacts
+    data = request.json or {}
+    if data.get('password') != UPLOAD_PASSWORD:
+        return jsonify({'error': 'Wrong password'}), 403
+    phone = str(data.get('phone','')).replace('+91','')
+    before = len(cached_contacts)
+    cached_contacts = [a for a in cached_contacts if a['phone'].replace('+91','') != phone]
+    if len(cached_contacts) == before:
+        return jsonify({'error': 'Not found'}), 404
+    return jsonify({'success': True, 'removed': before - len(cached_contacts), 'total': len(cached_contacts)})
 
 @app.route('/incoming-call', methods=['POST'])
 def incoming_call():
-    """
-    Incoming call handle karo
-    Jab koi agent Twilio number pe call kare
-    """
     caller = request.form.get('From', '')
     call_sid = request.form.get('CallSid', '')
-    
-    # Agent identify karo
     agent = find_agent_by_phone(caller)
-    agent_name = agent['name'] if agent else 'Agent'
-    
-    print(f"📞 Incoming call from: {caller} — {agent_name}")
-    
-    # AI response generate karo
+    name = agent['name'].split()[0].title() if agent else 'Agent'
+    print(f"📞 Incoming: {caller} — {name}")
     response = VoiceResponse()
-    
-    # Hindi mein greet karo
-    gather = Gather(
-        input='speech',
-        language='hi-IN',
-        speech_timeout='auto',
-        action=f'/handle-speech?agent={agent_name}&caller={caller}',
-        method='POST'
-    )
-    
-    gather.say(
-        f"Namaste {agent_name} ji! Main aapka AI assistant hoon. "
-        f"PB Partners mein aapki kaise madad kar sakta hoon? "
-        f"Aap motor insurance, bike insurance, ya health insurance ke baare mein puchh sakte hain.",
-        voice='Polly.Aditi',
-        language='hi-IN'
-    )
-    
+    gather = Gather(input='speech', language='hi-IN', speech_timeout='auto', action=f'/handle-speech?agent={name}&caller={caller}', method='POST')
+    gather.say(f"Namaste {name} ji! Main Agent Guru hoon, aapka AI assistant. PB Partners mein aapki kaise madad kar sakta hoon?", voice='Polly.Aditi', language='hi-IN')
     response.append(gather)
-    response.say("Koi response nahi mila. Phir call karein.", 
-                 voice='Polly.Aditi', language='hi-IN')
-    
+    response.say("Koi response nahi aaya. Phir call karein.", voice='Polly.Aditi', language='hi-IN')
     return Response(str(response), mimetype='text/xml')
 
 @app.route('/handle-speech', methods=['POST'])
 def handle_speech():
-    """Agent ki baat sunke AI response do"""
-    speech_result = request.form.get('SpeechResult', '')
-    agent_name    = request.args.get('agent', 'Agent')
-    caller        = request.args.get('caller', '')
-    call_sid      = request.form.get('CallSid', '')
-    
-    print(f"🎤 Speech from {agent_name}: {speech_result}")
-    
-    if not speech_result:
+    speech = request.form.get('SpeechResult', '')
+    agent = request.args.get('agent', 'Agent')
+    caller = request.args.get('caller', '')
+    call_sid = request.form.get('CallSid', '')
+    print(f"🎤 {agent}: {speech}")
+    if not speech:
         response = VoiceResponse()
-        response.say("Maafi chahta hoon, mujhe samajh nahi aaya. Phir bolein.",
-                    voice='Polly.Aditi', language='hi-IN')
+        response.say("Maafi chahta hoon, samajh nahi aaya. Phir bolein.", voice='Polly.Aditi', language='hi-IN')
         return Response(str(response), mimetype='text/xml')
-    
-    # OpenAI se AI response lo
-    ai_reply = get_ai_response(speech_result, agent_name, call_sid)
-    
+    ai_reply = get_ai_response(speech, agent, call_sid)
     response = VoiceResponse()
-    
-    gather = Gather(
-        input='speech',
-        language='hi-IN', 
-        speech_timeout='auto',
-        action=f'/handle-speech?agent={agent_name}&caller={caller}',
-        method='POST'
-    )
+    gather = Gather(input='speech', language='hi-IN', speech_timeout='auto', action=f'/handle-speech?agent={agent}&caller={caller}', method='POST')
     gather.say(ai_reply, voice='Polly.Aditi', language='hi-IN')
     response.append(gather)
-    
     return Response(str(response), mimetype='text/xml')
 
 @app.route('/call-status', methods=['POST'])
 def call_status():
-    """Call status update"""
-    status   = request.form.get('CallStatus', '')
-    call_sid = request.form.get('CallSid', '')
-    print(f"📊 Call {call_sid} status: {status}")
+    print(f"📊 Call {request.form.get('CallSid')}: {request.form.get('CallStatus')}")
     return '', 200
 
 @app.route('/make-call', methods=['POST'])
 def make_call():
-    """
-    Outgoing call karo kisi agent ko
-    POST: {"phone": "+919876543210", "message": "Reminder message"}
-    """
-    data    = request.json or {}
-    phone   = data.get('phone', '')
-    message = data.get('message', 'Namaste! Yeh ek reminder call hai PB Partners ki taraf se.')
-    
-    if not phone:
-        return jsonify({'error': 'Phone number required'}), 400
-    
+    data = request.json or {}
+    phone = str(data.get('phone', ''))
+    message = data.get('message', 'Namaste! Yeh Agent Guru ka call hai. PB Partners app open karein.')
+    if len(phone) == 10: phone = '+91' + phone
+    if not phone: return jsonify({'error': 'phone required'}), 400
     try:
-        call = twilio_client.calls.create(
-            to=phone,
-            from_=TWILIO_FROM_NUMBER,
-            twiml=f'''<Response>
-                <Say voice="Polly.Aditi" language="hi-IN">{message}</Say>
-            </Response>'''
-        )
-        print(f"📲 Outgoing call to {phone}: {call.sid}")
+        call = twilio_client.calls.create(to=phone, from_=TWILIO_FROM_NUMBER, twiml=f'<Response><Say voice="Polly.Aditi" language="hi-IN">{message}</Say></Response>')
         return jsonify({'success': True, 'call_sid': call.sid, 'to': phone})
     except Exception as e:
-        print(f"❌ Call error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/call-agent/<agent_id>', methods=['GET', 'POST'])
+def call_agent(agent_id):
+    agent = next((a for a in cached_contacts if a['agent_id'] == agent_id), None)
+    if not agent: return jsonify({'error': 'Not found'}), 404
+    msg = (request.json or {}).get('message', f'Namaste {agent["name"].split()[0].title()} ji! Yeh PB Partners ka reminder call hai. Apna target complete karein.')
+    try:
+        call = twilio_client.calls.create(to=agent['phone'], from_=TWILIO_FROM_NUMBER, twiml=f'<Response><Say voice="Polly.Aditi" language="hi-IN">{msg}</Say></Response>')
+        return jsonify({'success': True, 'agent': agent['name'], 'call_sid': call.sid})
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/call-all', methods=['POST'])
 def call_all():
-    """Sabhi 217 agents ko reminder call karo"""
-    data    = request.json or {}
-    message = data.get('message', 
-        'Namaste! Yeh PB Partners ka reminder call hai. '
-        'Apna target complete karne ke liye PB Partners app open karein. Dhanyawad!')
-    
+    data = request.json or {}
+    message = data.get('message', 'Namaste! PB Partners ka reminder — apna target complete karein. Dhanyawad!')
+    limit = int(data.get('limit', 5))
     results = []
-    for agent in cached_contacts[:5]:  # Test ke liye pehle 5
+    for agent in cached_contacts[:limit]:
         try:
-            call = twilio_client.calls.create(
-                to=agent['phone'],
-                from_=TWILIO_FROM_NUMBER,
-                twiml=f'''<Response>
-                    <Say voice="Polly.Aditi" language="hi-IN">
-                        Namaste {agent["name"]} ji! {message}
-                    </Say>
-                </Response>'''
-            )
+            call = twilio_client.calls.create(to=agent['phone'], from_=TWILIO_FROM_NUMBER, twiml=f'<Response><Say voice="Polly.Aditi" language="hi-IN">Namaste {agent["name"].split()[0].title()} ji! {message}</Say></Response>')
             results.append({'agent': agent['name'], 'status': 'called', 'sid': call.sid})
         except Exception as e:
             results.append({'agent': agent['name'], 'status': 'failed', 'error': str(e)})
-    
-    return jsonify({'results': results, 'total': len(results)})
-
-@app.route('/agent/<agent_id>', methods=['GET'])
-def get_agent(agent_id):
-    """Specific agent ki info"""
-    for agent in cached_contacts:
-        if agent['agent_id'] == agent_id:
-            return jsonify(agent)
-    return jsonify({'error': 'Agent not found'}), 404
+    return jsonify({'success': True, 'results': results, 'called': len(results)})
 
 # ================================================================
-# AI RESPONSE — OpenAI GPT
+# HELPERS
 # ================================================================
-def get_ai_response(user_message, agent_name, call_sid):
-    """OpenAI se insurance guide response lo"""
+def find_agent_by_phone(phone):
+    clean = phone.replace('+91','').replace('+','').strip()[-10:]
+    return next((a for a in cached_contacts if a['phone'].replace('+91','').strip()[-10:] == clean), None)
+
+def get_ai_response(msg, agent_name, call_sid):
     try:
-        # Conversation history
-        if call_sid not in conversations:
-            conversations[call_sid] = []
-        
-        conversations[call_sid].append({
-            "role": "user", 
-            "content": user_message
-        })
-        
-        system_prompt = f"""Tu ek expert insurance AI assistant hai — Agent Guru.
-Tu {agent_name} ji se baat kar raha hai jo ek PB Partners insurance agent hai.
-
-Tu inhe guide karta hai:
-- Motor/Car insurance quote karne mein
-- Bike insurance karne mein  
-- Health insurance karne mein
-- Third Party policy mein
-- Customer se kaise baat karein
-
-Rules:
-- Hamesha Hindi mein baat kar
-- Simple aur clear language use kar
-- Step by step guide kar
-- Encouragement de
-- 2-3 sentences mein jawab de (call pe zyada lamba nahi)
-- Professional lekin friendly reh"""
-
-        response = openai.chat.completions.create(
+        if call_sid not in conversations: conversations[call_sid] = []
+        conversations[call_sid].append({"role": "user", "content": msg})
+        resp = openai.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                *conversations[call_sid][-6:]  # Last 6 messages
-            ],
-            max_tokens=150,
-            temperature=0.7
-        )
-        
-        ai_reply = response.choices[0].message.content
-        conversations[call_sid].append({"role": "assistant", "content": ai_reply})
-        
-        print(f"🤖 AI: {ai_reply}")
-        return ai_reply
-        
+            messages=[{"role": "system", "content": f"Tu Agent Guru hai — expert insurance AI assistant. {agent_name} ji se Hindi mein baat kar. 2-3 sentences mein helpful insurance guidance de. PB Partners app use karne mein guide kar."}, *conversations[call_sid][-6:]],
+            max_tokens=120, temperature=0.7)
+        reply = resp.choices[0].message.content
+        conversations[call_sid].append({"role": "assistant", "content": reply})
+        return reply
     except Exception as e:
-        print(f"❌ OpenAI error: {e}")
-        return "Maafi chahta hoon, abhi technical problem hai. Thodi der mein phir try karein."
+        return "Maafi chahta hoon, abhi technical dikkat hai. Dobara try karein."
 
-# ================================================================
-# MAIN
 # ================================================================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
-    print(f"🚀 Agent Guru starting on port {port}")
-    print(f"📊 {len(cached_contacts)} agents loaded")
+    print(f"🚀 Agent Guru v2.0 — Port {port} — {len(cached_contacts)} agents")
     app.run(host='0.0.0.0', port=port, debug=False)
