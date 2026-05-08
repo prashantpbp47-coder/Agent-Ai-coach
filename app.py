@@ -1367,3 +1367,17 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     print(f"🤖 Priya AI v3.0 FINAL — Port {port} — {len(cached_contacts)} agents")
     app.run(host='0.0.0.0', port=port, debug=False)
+
+@app.route("/")
+def home():
+    return "Agent AI Coach Running Successfully"
+
+
+@app.route("/health")
+def health():
+    return {"status": "ok"}
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port, debug=False)
