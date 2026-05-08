@@ -1,5 +1,3 @@
-Content is user-generated and unverified.
-1
 #!/usr/bin/env python3
 """
 PRIYA AI v3.0 FINAL — Prashant Chandratre ji ki AI Assistant
