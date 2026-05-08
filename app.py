@@ -2,6 +2,7 @@
 """
 PRIYA AI v3.0 FINAL — Prashant Chandratre ji ki AI Assistant
 Crash-proof | Hindi+Marathi | Sales | Quotation | WhatsApp | Leaderboard
+Run: gunicorn app:app --bind 0.0.0.0:$PORT
 """
 
 # ── Safe imports ──────────────────────────────────────────────
@@ -20,16 +21,16 @@ except:
 app = Flask(__name__)
 
 # ── CONFIG ────────────────────────────────────────────────────
-TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID','')
-TWILIO_API_KEY     = os.environ.get('TWILIO_API_KEY','')
-TWILIO_API_SECRET  = os.environ.get('TWILIO_API_SECRET','')
-TWILIO_FROM_NUMBER = os.environ.get('TWILIO_FROM_NUMBER','+917709446589')
-OPENAI_API_KEY     = os.environ.get('OPENAI_API_KEY','')
-PRASHANT_NUMBER    = os.environ.get('PRASHANT_NUMBER','+917709446589')
-PRASHANT_WA        = os.environ.get('PRASHANT_WHATSAPP','+917709446589')
-UPLOAD_PASSWORD    = os.environ.get('UPLOAD_PASSWORD','agentguru2024')
-DAILY_TARGET       = int(os.environ.get('DAILY_TARGET','300000'))
-INTERAKT_KEY       = os.environ.get('INTERAKT_API_KEY','')
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_API_KEY     = os.environ.get('TWILIO_API_KEY', '')
+TWILIO_API_SECRET  = os.environ.get('TWILIO_API_SECRET', '')
+TWILIO_FROM_NUMBER = os.environ.get('TWILIO_FROM_NUMBER', '+917709446589')
+OPENAI_API_KEY     = os.environ.get('OPENAI_API_KEY', '')
+PRASHANT_NUMBER    = os.environ.get('PRASHANT_NUMBER', '+917709446589')
+PRASHANT_WA        = os.environ.get('PRASHANT_WHATSAPP', '+917709446589')
+UPLOAD_PASSWORD    = os.environ.get('UPLOAD_PASSWORD', 'agentguru2024')
+DAILY_TARGET       = int(os.environ.get('DAILY_TARGET', '300000'))
+INTERAKT_KEY       = os.environ.get('INTERAKT_API_KEY', '')
 
 openai.api_key = OPENAI_API_KEY
 try:
@@ -39,40 +40,50 @@ except:
 
 # ── CONSTANTS ─────────────────────────────────────────────────
 PRASHANT = {
-    "name":"Prashant Chandratre","role":"Relationship Manager",
-    "company":"PB Partners — Policybazaar","tagline":"Ek Rishta Bharose Ka",
-    "phone":"7709446589","wa":"wa.me/7709446589",
-    "email":"prashantchandratre@pbpartners.com","web":"pbpartners.com",
-    "note":"PBPartners is a brand under Policybazaar Insurance Broker Pvt. Ltd."
+    "name":    "Prashant Chandratre",
+    "role":    "Relationship Manager",
+    "company": "PB Partners — Policybazaar",
+    "tagline": "Ek Rishta Bharose Ka",
+    "phone":   "7709446589",
+    "wa":      "wa.me/7709446589",
+    "email":   "prashantchandratre@pbpartners.com",
+    "web":     "pbpartners.com",
+    "note":    "PBPartners is a brand under Policybazaar Insurance Broker Pvt. Ltd."
 }
 
 DOCS_REQUIRED = [
-    {"id":1,"name":"PAN Card","emoji":"🪪","detail":"Clear photo"},
-    {"id":2,"name":"Aadhaar Card","emoji":"🪪","detail":"Front + Back"},
-    {"id":3,"name":"Bank Account","emoji":"🏦","detail":"Cancelled cheque"},
-    {"id":4,"name":"10th Certificate","emoji":"📄","detail":"Education proof"},
-    {"id":5,"name":"Mobile Number","emoji":"📱","detail":"Aadhaar linked"},
-    {"id":6,"name":"Email ID","emoji":"📧","detail":"Active email"},
-    {"id":7,"name":"Selfie","emoji":"🤳","detail":"Live photo"},
+    {"id": 1, "name": "PAN Card",        "emoji": "🪪", "detail": "Clear photo"},
+    {"id": 2, "name": "Aadhaar Card",    "emoji": "🪪", "detail": "Front + Back"},
+    {"id": 3, "name": "Bank Account",    "emoji": "🏦", "detail": "Cancelled cheque"},
+    {"id": 4, "name": "10th Certificate","emoji": "📄", "detail": "Education proof"},
+    {"id": 5, "name": "Mobile Number",   "emoji": "📱", "detail": "Aadhaar linked"},
+    {"id": 6, "name": "Email ID",        "emoji": "📧", "detail": "Active email"},
+    {"id": 7, "name": "Selfie",          "emoji": "🤳", "detail": "Live photo"},
 ]
 
 # ── DATA STORES ───────────────────────────────────────────────
-conversations  = {}
-agent_profiles = {}
-daily_knowledge= []
-pending_cases  = {}
-active_leads   = {}
-agent_scores   = {}
-new_prospects  = {}
-collected_docs = {}
+conversations   = {}
+agent_profiles  = {}
+daily_knowledge = []
+pending_cases   = {}
+active_leads    = {}
+agent_scores    = {}
+new_prospects   = {}
+collected_docs  = {}
 
 today_biz = {
-    'date':str(date.today()),'total_premium':0,'total_policies':0,
-    'target':DAILY_TARGET,'agents_called':[],'agents_reported':[],
-    'agent_data':{},'urgent_agents':[],'projected':0
+    'date':            str(date.today()),
+    'total_premium':   0,
+    'total_policies':  0,
+    'target':          DAILY_TARGET,
+    'agents_called':   [],
+    'agents_reported': [],
+    'agent_data':      {},
+    'urgent_agents':   [],
+    'projected':       0
 }
 
-# ── 217 AGENTS LOADED FROM EXCEL ─────────────────────────────
+# ── 217 AGENTS ────────────────────────────────────────────────
 cached_contacts = [
     {'name':'NIKITA NAMDEV WATPADE','phone':'+919823709779','agent_id':'IP218178','city':'Nashik','language':'marathi','type':'MAIN_AGENT','parent_code':'','onboarding':'pending','remarks':''},
     {'name':'SUNILBHAI VANJARI','phone':'+919922053230','agent_id':'IP263054','city':'Nashik','language':'marathi','type':'MAIN_AGENT','parent_code':'','onboarding':'pending','remarks':''},
@@ -292,10 +303,8 @@ cached_contacts = [
     {'name':'CHAITALI MANOJ THORAT','phone':'+919823560031','agent_id':'IP388501','city':'Nashik','language':'marathi','type':'MAIN_AGENT','parent_code':'','onboarding':'pending','remarks':''},
     {'name':'THORAT GANESH MANOJ','phone':'+919665181576','agent_id':'IP388504','city':'Nashik','language':'marathi','type':'MAIN_AGENT','parent_code':'','onboarding':'pending','remarks':''},
 ]
-# 217 agents loaded from Excel — Nashik
 
-
-# ── PRIYA SYSTEM ──────────────────────────────────────────────
+# ── PRIYA SYSTEM PROMPT ───────────────────────────────────────
 PRIYA_SYSTEM = f"""Tu "Priya" aahes — Prashant Chandratre ji chi Personal AI Insurance Sales Assistant.
 
 IDENTITY: Naam Priya | 4 saal insurance experience | Hindi+Marathi fluent
@@ -303,7 +312,7 @@ Prashant Chandratre ji chi AI — unchi taraf ne baat karti hai
 
 SALES FLOW (ek ek step):
 1. "Aaj koi business hai? Customer ready hai?"
-2. "Car hai ki Bike?" 
+2. "Car hai ki Bike?"
 3. "Policy: Comprehensive / Third Party / Zero Dep?"
 4. "RC photo WhatsApp karo {PRASHANT['phone']} pe. Ya reg number batao."
 5. "Purani policy? Claim tha pichle saal?" (NCB ke liye)
@@ -322,206 +331,264 @@ Commission 15-25%, KYC process, Payment link, Renewal tracking."""
 
 # ── HELPERS ───────────────────────────────────────────────────
 def detect_lang(text):
-    if not text: return 'hindi'
+    if not text:
+        return 'hindi'
     m_words = ['आहे','नाही','करा','मला','तुम्ही','aahe','nahi','kara','mala','tumhi',
                'cha','chi','la','tar','pan','kay','kase','zala','nako','kiti','aaj']
-    return 'marathi' if sum(1 for w in m_words if w in text.lower())>=1 else 'hindi'
+    return 'marathi' if sum(1 for w in m_words if w in text.lower()) >= 1 else 'hindi'
 
 def greet(name, lang):
-    h=datetime.now().hour; fn=name.split()[0].title()
-    if lang=='marathi':
-        t='सुप्रभात' if h<12 else ('नमस्ते' if h<17 else 'शुभ संध्या')
+    h = datetime.now().hour
+    fn = name.split()[0].title()
+    if lang == 'marathi':
+        t = 'सुप्रभात' if h < 12 else ('नमस्ते' if h < 17 else 'शुभ संध्या')
         return f"{t} {fn} जी! मी प्रिया, Prashant जींची AI assistant."
-    t='Good morning' if h<12 else ('Namaste' if h<17 else 'Good evening')
+    t = 'Good morning' if h < 12 else ('Namaste' if h < 17 else 'Good evening')
     return f"{t} {fn} ji! Main Priya, Prashant Chandratre ji ki AI assistant."
 
 def find_agent(phone):
-    clean=phone.replace('+91','').replace('+','').strip()[-10:]
-    return next((a for a in cached_contacts if a['phone'].replace('+91','').strip()[-10:]==clean),None)
+    clean = phone.replace('+91', '').replace('+', '').strip()[-10:]
+    return next((a for a in cached_contacts if a['phone'].replace('+91', '').strip()[-10:] == clean), None)
 
 def get_parent(agent):
     if agent and agent.get('parent_code'):
-        return next((a for a in cached_contacts if a['agent_id']==agent['parent_code']),None)
+        return next((a for a in cached_contacts if a['agent_id'] == agent['parent_code']), None)
     return None
 
 def is_calling_hours():
-    h=datetime.now().hour
-    return 10<=h<18
+    h = datetime.now().hour
+    return 10 <= h < 18
 
 def calling_blocked(lang='hindi'):
-    now=datetime.now()
-    if lang=='marathi':
-        return jsonify({"error":"Priya fakt 10 AM - 6 PM mein outgoing calls karte.",
-                       "current":now.strftime("%I:%M %p"),"allowed":"10:00 AM — 6:00 PM"}),403
-    return jsonify({"error":"Priya only calls 10 AM - 6 PM. Incoming 24/7 active.",
-                   "current":now.strftime("%I:%M %p"),"allowed":"10:00 AM — 6:00 PM"}),403
+    now = datetime.now()
+    if lang == 'marathi':
+        return jsonify({"error": "Priya fakt 10 AM - 6 PM mein outgoing calls karte.",
+                        "current": now.strftime("%I:%M %p"), "allowed": "10:00 AM — 6:00 PM"}), 403
+    return jsonify({"error": "Priya only calls 10 AM - 6 PM. Incoming 24/7 active.",
+                    "current": now.strftime("%I:%M %p"), "allowed": "10:00 AM — 6:00 PM"}), 403
 
 def reset_daily():
     global today_biz
-    if today_biz['date']!=str(date.today()):
-        today_biz={'date':str(date.today()),'total_premium':0,'total_policies':0,
-                  'target':DAILY_TARGET,'agents_called':[],'agents_reported':[],
-                  'agent_data':{},'urgent_agents':[],'projected':0}
+    if today_biz['date'] != str(date.today()):
+        today_biz = {
+            'date': str(date.today()), 'total_premium': 0, 'total_policies': 0,
+            'target': DAILY_TARGET, 'agents_called': [], 'agents_reported': [],
+            'agent_data': {}, 'urgent_agents': [], 'projected': 0
+        }
 
-def update_biz(aid,aname,premium,policies,ptypes,pending,notes):
+def update_biz(aid, aname, premium, policies, ptypes, pending, notes):
     reset_daily()
-    today_biz['agent_data'][aid]={'name':aname,'premium':premium,'policies':policies,
-        'policy_types':ptypes,'pending':pending,'notes':notes,'time':datetime.now().strftime("%H:%M")}
-    if aid not in today_biz['agents_reported']: today_biz['agents_reported'].append(aid)
-    today_biz['total_premium']=sum(v['premium'] for v in today_biz['agent_data'].values())
-    today_biz['total_policies']=sum(v['policies'] for v in today_biz['agent_data'].values())
-    r=len(today_biz['agents_reported'])
-    if r>0: today_biz['projected']=int((today_biz['total_premium']/r)*len(cached_contacts))
+    today_biz['agent_data'][aid] = {
+        'name': aname, 'premium': premium, 'policies': policies,
+        'policy_types': ptypes, 'pending': pending, 'notes': notes,
+        'time': datetime.now().strftime("%H:%M")
+    }
+    if aid not in today_biz['agents_reported']:
+        today_biz['agents_reported'].append(aid)
+    today_biz['total_premium']  = sum(v['premium']  for v in today_biz['agent_data'].values())
+    today_biz['total_policies'] = sum(v['policies'] for v in today_biz['agent_data'].values())
+    r = len(today_biz['agents_reported'])
+    if r > 0:
+        today_biz['projected'] = int((today_biz['total_premium'] / r) * len(cached_contacts))
 
 def do_transfer(lang):
-    msg="थांबा, Prashant जींशी connect करते..." if lang=='marathi' else "Ek second, Prashant ji se connect karti hoon..."
-    resp=VoiceResponse()
-    resp.say(msg,voice='Polly.Aditi',language='hi-IN')
-    d=Dial(caller_id=TWILIO_FROM_NUMBER,timeout=30); d.number(PRASHANT_NUMBER); resp.append(d)
-    no="उपलब्ध नाहीत. Message पाठवते." if lang=='marathi' else "Available nahi. Message karungi."
-    resp.say(no,voice='Polly.Aditi',language='hi-IN')
-    return Response(str(resp),mimetype='text/xml')
+    msg = "थांबा, Prashant जींशी connect करते..." if lang == 'marathi' else "Ek second, Prashant ji se connect karti hoon..."
+    resp = VoiceResponse()
+    resp.say(msg, voice='Polly.Aditi', language='hi-IN')
+    d = Dial(caller_id=TWILIO_FROM_NUMBER, timeout=30)
+    d.number(PRASHANT_NUMBER)
+    resp.append(d)
+    no = "उपलब्ध नाहीत. Message पाठवते." if lang == 'marathi' else "Available nahi. Message karungi."
+    resp.say(no, voice='Polly.Aditi', language='hi-IN')
+    return Response(str(resp), mimetype='text/xml')
 
 # ── WHATSAPP ──────────────────────────────────────────────────
 def send_wa(phone, msg):
-    if not phone: return False
-    if not phone.startswith('+'): phone='+91'+phone.replace('+91','')
+    if not phone:
+        return False
+    if not phone.startswith('+'):
+        phone = '+91' + phone.replace('+91', '')
     if INTERAKT_KEY:
         try:
-            r=requests.post("https://api.interakt.ai/v1/public/message/",
-                json={"fullPhoneNumber":phone,"callbackData":"priya","type":"Text","data":{"message":msg}},
-                headers={"Authorization":f"Basic {INTERAKT_KEY}","Content-Type":"application/json"},timeout=10)
-            if r.status_code in [200,201]: return True
-        except: pass
+            r = requests.post(
+                "https://api.interakt.ai/v1/public/message/",
+                json={"fullPhoneNumber": phone, "callbackData": "priya",
+                      "type": "Text", "data": {"message": msg}},
+                headers={"Authorization": f"Basic {INTERAKT_KEY}", "Content-Type": "application/json"},
+                timeout=10)
+            if r.status_code in [200, 201]:
+                return True
+        except:
+            pass
     try:
         if twilio_client:
-            twilio_client.messages.create(body=msg[:1600],from_=TWILIO_FROM_NUMBER,to=phone)
+            twilio_client.messages.create(body=msg[:1600], from_=TWILIO_FROM_NUMBER, to=phone)
             return True
     except Exception as e:
         print(f"WA/SMS err: {e}")
     return False
 
-def wa_p(msg): return send_wa(PRASHANT_WA,msg)
+def wa_p(msg):
+    return send_wa(PRASHANT_WA, msg)
 
 # ── QUOTATION ─────────────────────────────────────────────────
-def calc_quote(vtype,ptype,year,idv=None,ncb_years=0,has_claim=False):
-    age=datetime.now().year-int(year) if year else 3
-    is_car=vtype.lower() in ['car','motor']
-    if not idv: idv=max(100000,500000-(age*50000)) if is_car else max(30000,100000-(age*10000))
-    idv=int(idv)
-    od=int(idv*(0.035 if is_car else 0.03))
-    tp=(3416 if idv>300000 else 2094) if is_car else (1854 if idv>75000 else 1366)
-    ncb_d={0:0,1:20,2:25,3:35,4:45,5:50}.get(min(ncb_years,5),0)
-    nd=int(od*ncb_d/100) if not has_claim else 0
-    pt=ptype.lower()
-    if 'third' in pt or pt=='tp':
-        g=int(tp*0.18); return {'policy_type':'Third Party Only','tp_premium':tp,'gst_18pct':g,'total_premium':tp+g,'idv':idv}
+def calc_quote(vtype, ptype, year, idv=None, ncb_years=0, has_claim=False):
+    age = datetime.now().year - int(year) if year else 3
+    is_car = vtype.lower() in ['car', 'motor']
+    if not idv:
+        idv = max(100000, 500000 - (age * 50000)) if is_car else max(30000, 100000 - (age * 10000))
+    idv = int(idv)
+    od = int(idv * (0.035 if is_car else 0.03))
+    tp = (3416 if idv > 300000 else 2094) if is_car else (1854 if idv > 75000 else 1366)
+    ncb_d = {0: 0, 1: 20, 2: 25, 3: 35, 4: 45, 5: 50}.get(min(ncb_years, 5), 0)
+    nd = int(od * ncb_d / 100) if not has_claim else 0
+    pt = ptype.lower()
+    if 'third' in pt or pt == 'tp':
+        g = int(tp * 0.18)
+        return {'policy_type': 'Third Party Only', 'tp_premium': tp, 'gst_18pct': g, 'total_premium': tp + g, 'idv': idv}
     elif 'zero' in pt:
-        zd=int(idv*0.015); net=od-nd+tp+zd; g=int(net*0.18)
-        return {'policy_type':'Zero Depreciation','idv':idv,'od_premium':od,'tp_premium':tp,'ncb_discount':nd,'zd_premium':zd,'net_premium':net,'gst_18pct':g,'total_premium':net+g}
+        zd = int(idv * 0.015)
+        net = od - nd + tp + zd
+        g = int(net * 0.18)
+        return {'policy_type': 'Zero Depreciation', 'idv': idv, 'od_premium': od, 'tp_premium': tp,
+                'ncb_discount': nd, 'zd_premium': zd, 'net_premium': net, 'gst_18pct': g, 'total_premium': net + g}
     else:
-        net=od-nd+tp; g=int(net*0.18); zd=int(idv*0.015)
-        return {'policy_type':'Comprehensive','idv':idv,'od_premium':od,'tp_premium':tp,'ncb_discount':nd,'net_premium':net,'gst_18pct':g,'total_premium':net+g,'with_zero_dep':net+zd+int((net+zd)*0.18)}
+        net = od - nd + tp
+        g = int(net * 0.18)
+        zd = int(idv * 0.015)
+        return {'policy_type': 'Comprehensive', 'idv': idv, 'od_premium': od, 'tp_premium': tp,
+                'ncb_discount': nd, 'net_premium': net, 'gst_18pct': g, 'total_premium': net + g,
+                'with_zero_dep': net + zd + int((net + zd) * 0.18)}
 
-def quote_msg(aname,cname,reg,vtype,q,lang='marathi'):
-    fn=aname.split()[0].title() if aname else 'Agent'; total=q.get('total_premium',0)
-    hdr=f"🚗 *INSURANCE QUOTATION*\n━━━━━━━━━━━━━━━━━━━━\n👤 *{'Agent' if lang!='marathi' else 'Agent'}:* {fn} {'जी' if lang=='marathi' else 'ji'}\n👤 *Customer:* {cname or 'N/A'}\n🚗 *Vehicle:* {vtype or ''} {reg or ''}\n📋 *Policy:* {q.get('policy_type','')}\n━━━━━━━━━━━━━━━━━━━━\n"
-    if q.get('idv'):          hdr+=f"💰 IDV: ₹{q['idv']:,}\n"
-    if q.get('od_premium'):   hdr+=f"📊 OD: ₹{q['od_premium']:,}\n"
-    if q.get('tp_premium'):   hdr+=f"⚖️ TP: ₹{q['tp_premium']:,}\n"
-    if q.get('ncb_discount'): hdr+=f"✅ NCB: -₹{q['ncb_discount']:,}\n"
-    if q.get('zd_premium'):   hdr+=f"🛡️ Zero Dep: ₹{q['zd_premium']:,}\n"
-    hdr+=f"━━━━━━━━━━━━━━━━━━━━\n💳 GST 18%: ₹{q.get('gst_18pct',0):,}\n💰 *TOTAL: ₹{total:,}*\n━━━━━━━━━━━━━━━━━━━━\n🤖 Priya AI | Prashant Chandratre\n✅ PB Partners pe generate karo"
-    if q.get('with_zero_dep'): hdr+=f"\n💡 Zero Dep ke saath: ₹{q['with_zero_dep']:,}"
+def quote_msg(aname, cname, reg, vtype, q, lang='marathi'):
+    fn = aname.split()[0].title() if aname else 'Agent'
+    total = q.get('total_premium', 0)
+    hdr = (f"🚗 *INSURANCE QUOTATION*\n━━━━━━━━━━━━━━━━━━━━\n"
+           f"👤 *Agent:* {fn} {'जी' if lang == 'marathi' else 'ji'}\n"
+           f"👤 *Customer:* {cname or 'N/A'}\n"
+           f"🚗 *Vehicle:* {vtype or ''} {reg or ''}\n"
+           f"📋 *Policy:* {q.get('policy_type', '')}\n━━━━━━━━━━━━━━━━━━━━\n")
+    if q.get('idv'):          hdr += f"💰 IDV: ₹{q['idv']:,}\n"
+    if q.get('od_premium'):   hdr += f"📊 OD: ₹{q['od_premium']:,}\n"
+    if q.get('tp_premium'):   hdr += f"⚖️ TP: ₹{q['tp_premium']:,}\n"
+    if q.get('ncb_discount'): hdr += f"✅ NCB: -₹{q['ncb_discount']:,}\n"
+    if q.get('zd_premium'):   hdr += f"🛡️ Zero Dep: ₹{q['zd_premium']:,}\n"
+    hdr += (f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"💳 GST 18%: ₹{q.get('gst_18pct', 0):,}\n"
+            f"💰 *TOTAL: ₹{total:,}*\n━━━━━━━━━━━━━━━━━━━━\n"
+            f"🤖 Priya AI | Prashant Chandratre\n✅ PB Partners pe generate karo")
+    if q.get('with_zero_dep'):
+        hdr += f"\n💡 Zero Dep ke saath: ₹{q['with_zero_dep']:,}"
     return hdr
 
 # ── AI RESPONSE ───────────────────────────────────────────────
 def priya_reply(user_msg, agent, call_sid, lang, ctype='sales'):
     try:
-        if call_sid not in conversations: conversations[call_sid]=[]
-        conversations[call_sid].append({"role":"user","content":user_msg})
-        aname=agent['name'] if agent else 'Agent'
-        aid=agent['agent_id'] if agent else ''
-        onb=agent.get('onboarding','') if agent else ''
-        rem=agent.get('remarks','') if agent else ''
-        li=lang=='marathi'
-        
-        # Onboarding context
-        onb_ctx=""
-        if onb in ['pending','']:
-            onb_ctx="\nIMPORTANT: Is agent ka onboarding PENDING hai. Zaroor poochho:\n- Documents submit ho gaye?\n- Google form fill kiya?\n- Koi help chahiye?" if not li else "\nIMPORTANT: Ya agent cha onboarding PENDING aahe. Zaroor vicharaa:\n- Documents submit zale?\n- Google form fill kela?\n- Kahi madad havi?"
-        
-        pending=pending_cases.get(aid,{})
-        p_info=f"\nCase pending: {json.dumps(pending,ensure_ascii=False)}" if pending else ""
-        
-        if ctype=='sales':
-            goal=f"SALES: Step by step collect karo — vehicle>policy>RC>old policy+claim>customer name+mobile{p_info}{onb_ctx}\nSab ho to: 'Quotation nikal kar WhatsApp karti hoon!'"
+        if call_sid not in conversations:
+            conversations[call_sid] = []
+        conversations[call_sid].append({"role": "user", "content": user_msg})
+        aname = agent['name'] if agent else 'Agent'
+        aid   = agent['agent_id'] if agent else ''
+        onb   = agent.get('onboarding', '') if agent else ''
+        rem   = agent.get('remarks', '') if agent else ''
+        li    = lang == 'marathi'
+
+        onb_ctx = ""
+        if onb in ['pending', '']:
+            onb_ctx = ("\nIMPORTANT: Is agent ka onboarding PENDING hai. Zaroor poochho:\n"
+                       "- Documents submit ho gaye?\n- Google form fill kiya?\n- Koi help chahiye?"
+                       if not li else
+                       "\nIMPORTANT: Ya agent cha onboarding PENDING aahe. Zaroor vicharaa:\n"
+                       "- Documents submit zale?\n- Google form fill kela?\n- Kahi madad havi?")
+
+        pending = pending_cases.get(aid, {})
+        p_info  = f"\nCase pending: {json.dumps(pending, ensure_ascii=False)}" if pending else ""
+
+        if ctype == 'sales':
+            goal = (f"SALES: Step by step collect karo — vehicle>policy>RC>old policy+claim>"
+                    f"customer name+mobile{p_info}{onb_ctx}\nSab ho to: 'Quotation nikal kar WhatsApp karti hoon!'")
         else:
-            goal="BUSINESS: Aaj ki policies, premium, koi problem?"
-        
-        system=f"{PRIYA_SYSTEM}\nCURRENT: {aname} ({aid})\nRemarks: {rem or 'None'}\n{goal}\n{'MARATHI madhe jawab de.' if li else 'HINDI mein jawab de.'}\n2-3 sentences max."
-        
-        resp=openai.chat.completions.create(
+            goal = "BUSINESS: Aaj ki policies, premium, koi problem?"
+
+        system = (f"{PRIYA_SYSTEM}\nCURRENT: {aname} ({aid})\nRemarks: {rem or 'None'}\n{goal}\n"
+                  f"{'MARATHI madhe jawab de.' if li else 'HINDI mein jawab de.'}\n2-3 sentences max.")
+
+        resp = openai.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role":"system","content":system},*conversations[call_sid][-8:]],
-            max_tokens=150,temperature=0.75)
-        reply=resp.choices[0].message.content.strip()
-        conversations[call_sid].append({"role":"assistant","content":reply})
-        
-        # Extract + auto-process
-        _extract(aid,aname,conversations[call_sid],ctype,agent)
-        
-        # Profile update
+            messages=[{"role": "system", "content": system}, *conversations[call_sid][-8:]],
+            max_tokens=150, temperature=0.75)
+        reply = resp.choices[0].message.content.strip()
+        conversations[call_sid].append({"role": "assistant", "content": reply})
+
+        _extract(aid, aname, conversations[call_sid], ctype, agent)
+
         if aid:
-            if aid not in agent_profiles: agent_profiles[aid]={'name':aname,'interactions':0,'last_call':'','lang':lang}
-            agent_profiles[aid]['interactions']+=1
-            agent_profiles[aid]['last_call']=datetime.now().strftime("%d/%m %H:%M")
-        
-        if len(user_msg)>10:
+            if aid not in agent_profiles:
+                agent_profiles[aid] = {'name': aname, 'interactions': 0, 'last_call': '', 'lang': lang}
+            agent_profiles[aid]['interactions'] += 1
+            agent_profiles[aid]['last_call'] = datetime.now().strftime("%d/%m %H:%M")
+
+        if len(user_msg) > 10:
             daily_knowledge.append(f"{aname}: {user_msg[:80]}")
-            if len(daily_knowledge)>200: daily_knowledge.pop(0)
-        
-        transfer=any(w in user_msg.lower() for w in ['prashant','transfer','manager','प्रशांत'])
+            if len(daily_knowledge) > 200:
+                daily_knowledge.pop(0)
+
+        transfer = any(w in user_msg.lower() for w in ['prashant', 'transfer', 'manager', 'प्रशांत'])
         return reply, transfer
     except Exception as e:
         print(f"AI err: {e}")
-        fb="माफ करा, technical अडचण." if lang=='marathi' else "Maafi, technical issue."
+        fb = "माफ करा, technical अडचण." if lang == 'marathi' else "Maafi, technical issue."
         return fb, False
 
-def _extract(aid,aname,conv,ctype,agent_obj):
+def _extract(aid, aname, conv, ctype, agent_obj):
     try:
-        if len(conv)<2: return
-        ct="\n".join([f"{m['role']}: {m['content']}" for m in conv[-6:]])
-        if ctype=='sales':
-            pr=f"""Extract insurance details. ONLY JSON:
-{{"vehicle_type":"Car/Bike/empty","reg_number":"or empty","policy_type":"Comprehensive/ThirdParty/ZeroDep/empty","customer_name":"or empty","customer_mobile":"10digit or empty","vehicle_year":"or empty","has_claim":false,"ncb_years":0,"idv":0,"ready_for_quote":false}}
-Conversation:\n{ct}"""
+        if len(conv) < 2:
+            return
+        ct = "\n".join([f"{m['role']}: {m['content']}" for m in conv[-6:]])
+        if ctype == 'sales':
+            pr = (f"""Extract insurance details. ONLY JSON:\n"""
+                  f"""{{"vehicle_type":"Car/Bike/empty","reg_number":"or empty","policy_type":"Comprehensive/ThirdParty/ZeroDep/empty","""
+                  f""""customer_name":"or empty","customer_mobile":"10digit or empty","vehicle_year":"or empty","""
+                  f""""has_claim":false,"ncb_years":0,"idv":0,"ready_for_quote":false}}\nConversation:\n{ct}""")
         else:
-            pr=f"""Extract business data. ONLY JSON:
-{{"policies":0,"premium":0,"policy_types":"","pending":"","needs_help":false,"urgent":false}}
-Conversation:\n{ct}"""
-        r=openai.chat.completions.create(model="gpt-4o-mini",
-            messages=[{"role":"user","content":pr}],max_tokens=180,temperature=0)
-        raw=r.choices[0].message.content.strip().replace('```json','').replace('```','').strip()
-        data=json.loads(raw)
-        if ctype=='sales':
-            if aid not in pending_cases: pending_cases[aid]={}
-            for k,v in data.items():
-                if v and v!=0 and v!='empty' and v!='': pending_cases[aid][k]=v
+            pr = (f"""Extract business data. ONLY JSON:\n"""
+                  f"""{{"policies":0,"premium":0,"policy_types":"","pending":"","needs_help":false,"urgent":false}}\nConversation:\n{ct}""")
+
+        r   = openai.chat.completions.create(model="gpt-4o-mini",
+              messages=[{"role": "user", "content": pr}], max_tokens=180, temperature=0)
+        raw  = r.choices[0].message.content.strip().replace('```json', '').replace('```', '').strip()
+        data = json.loads(raw)
+
+        if ctype == 'sales':
+            if aid not in pending_cases:
+                pending_cases[aid] = {}
+            for k, v in data.items():
+                if v and v != 0 and v != 'empty' and v != '':
+                    pending_cases[aid][k] = v
             if data.get('ready_for_quote') and data.get('vehicle_type') and data.get('policy_type'):
-                c=pending_cases[aid]
-                q=calc_quote(c.get('vehicle_type','car'),c.get('policy_type','comprehensive'),
-                    c.get('vehicle_year',datetime.now().year-3),c.get('idv'),c.get('ncb_years',0),c.get('has_claim',False))
+                c = pending_cases[aid]
+                q = calc_quote(c.get('vehicle_type', 'car'), c.get('policy_type', 'comprehensive'),
+                               c.get('vehicle_year', datetime.now().year - 3),
+                               c.get('idv'), c.get('ncb_years', 0), c.get('has_claim', False))
                 if agent_obj:
-                    lang=agent_obj.get('language','marathi')
-                    m=quote_msg(agent_obj['name'],c.get('customer_name',''),c.get('reg_number',''),c.get('vehicle_type',''),q,lang)
-                    send_wa(agent_obj['phone'],m)
-                    wa_p(f"📋 NEW LEAD\n{agent_obj['name']}\n{c.get('customer_name','N/A')} | {c.get('customer_mobile','N/A')}\n{c.get('vehicle_type','')} {c.get('reg_number','')}\n₹{q.get('total_premium',0):,}")
-                    active_leads[f"{aid}_{datetime.now().strftime('%H%M')}"]={'agent_id':aid,'agent_name':agent_obj['name'],'case':c,'quotation':q,'time':datetime.now().strftime("%H:%M"),'date':str(date.today())}
-                    pending_cases[aid]={}
+                    lang = agent_obj.get('language', 'marathi')
+                    m = quote_msg(agent_obj['name'], c.get('customer_name', ''),
+                                  c.get('reg_number', ''), c.get('vehicle_type', ''), q, lang)
+                    send_wa(agent_obj['phone'], m)
+                    wa_p(f"📋 NEW LEAD\n{agent_obj['name']}\n"
+                         f"{c.get('customer_name','N/A')} | {c.get('customer_mobile','N/A')}\n"
+                         f"{c.get('vehicle_type','')} {c.get('reg_number','')}\n"
+                         f"₹{q.get('total_premium', 0):,}")
+                    active_leads[f"{aid}_{datetime.now().strftime('%H%M')}"] = {
+                        'agent_id': aid, 'agent_name': agent_obj['name'],
+                        'case': c, 'quotation': q,
+                        'time': datetime.now().strftime("%H:%M"), 'date': str(date.today())
+                    }
+                    pending_cases[aid] = {}
         else:
-            if data.get('policies',0)>0 or data.get('premium',0)>0:
-                update_biz(aid,aname,data.get('premium',0),data.get('policies',0),data.get('policy_types',''),data.get('pending',''),'')
+            if data.get('policies', 0) > 0 or data.get('premium', 0) > 0:
+                update_biz(aid, aname, data.get('premium', 0), data.get('policies', 0),
+                           data.get('policy_types', ''), data.get('pending', ''), '')
             if data.get('urgent') or data.get('needs_help'):
                 if aid not in today_biz['urgent_agents']:
                     today_biz['urgent_agents'].append(aid)
@@ -530,239 +597,327 @@ Conversation:\n{ct}"""
         print(f"Extract err: {e}")
 
 # ── CALL ROUTES ───────────────────────────────────────────────
-@app.route('/incoming-call',methods=['POST'])
+@app.route('/incoming-call', methods=['POST'])
 def incoming_call():
-    caller=request.form.get('From',''); call_sid=request.form.get('CallSid','')
-    agent=find_agent(caller)
+    caller   = request.form.get('From', '')
+    call_sid = request.form.get('CallSid', '')
+    agent    = find_agent(caller)
+
     if agent:
-        lang=agent.get('language','hindi'); name=agent['name']; aid=agent['agent_id']
-        parent=get_parent(agent); pm=''
+        lang    = agent.get('language', 'hindi')
+        name    = agent['name']
+        aid     = agent['agent_id']
+        parent  = get_parent(agent)
+        pm      = ''
         if parent:
-            pn=parent['name'].split()[0].title()
-            pm=f" तुम्ही {pn} जींच्या team मध्ये." if lang=='marathi' else f" Aap {pn} ji ki team mein."
-        onb=agent.get('onboarding','pending')
-        if onb in ['pending','']:
-            onb_hint=" Onboarding baaki hai — documents baare mein bhi baat karein." if lang=='hindi' else " Onboarding baaki aahe — documents baaddal bhi bolaa."
-        else:
-            onb_hint=""
+            pn = parent['name'].split()[0].title()
+            pm = f" तुम्ही {pn} जींच्या team मध्ये." if lang == 'marathi' else f" Aap {pn} ji ki team mein."
+        onb = agent.get('onboarding', 'pending')
+        onb_hint = (" Onboarding baaki hai — documents baare mein bhi baat karein."
+                    if lang == 'hindi' else
+                    " Onboarding baaki aahe — documents baaddal bhi bolaa.") if onb in ['pending', ''] else ''
     else:
-        lang='hindi'; name='Agent'; aid=''; pm=''; onb_hint=''
-    
-    g=greet(name,lang)
-    if lang=='marathi':
-        intro=f"{g}{pm} Prashant जींनी पाठवले.{onb_hint} आज कोणता business आहे? Customer ready असेल तर details द्या — quotation काढते!"
+        lang = 'hindi'; name = 'Agent'; aid = ''; pm = ''; onb_hint = ''
+
+    g = greet(name, lang)
+    if lang == 'marathi':
+        intro = (f"{g}{pm} Prashant जींनी पाठवले.{onb_hint} "
+                 f"आज कोणता business आहे? Customer ready असेल तर details द्या — quotation काढते!")
     else:
-        intro=f"{g}{pm} Prashant ji ne bheja hai.{onb_hint} Aaj koi business hai? Customer ready ho toh details do — quotation nikalungi!"
-    
+        intro = (f"{g}{pm} Prashant ji ne bheja hai.{onb_hint} "
+                 f"Aaj koi business hai? Customer ready ho toh details do — quotation nikalungi!")
+
     print(f"📞 Incoming: {caller} — {name} — {lang}")
-    resp=VoiceResponse()
-    g2=Gather(input='speech',language='hi-IN',speech_timeout='auto',
-              action=f'/handle-speech?aid={aid}&caller={caller}&lang={lang}&type=sales',method='POST')
-    g2.say(intro,voice='Polly.Aditi',language='hi-IN'); resp.append(g2)
-    resp.say("Response nahi mila." if lang=='hindi' else "Response mila nahi.",voice='Polly.Aditi',language='hi-IN')
-    return Response(str(resp),mimetype='text/xml')
+    resp = VoiceResponse()
+    g2 = Gather(input='speech', language='hi-IN', speech_timeout='auto',
+                action=f'/handle-speech?aid={aid}&caller={caller}&lang={lang}&type=sales', method='POST')
+    g2.say(intro, voice='Polly.Aditi', language='hi-IN')
+    resp.append(g2)
+    resp.say("Response nahi mila." if lang == 'hindi' else "Response mila nahi.",
+             voice='Polly.Aditi', language='hi-IN')
+    return Response(str(resp), mimetype='text/xml')
 
-@app.route('/handle-speech',methods=['POST'])
+@app.route('/handle-speech', methods=['POST'])
 def handle_speech():
-    speech=request.form.get('SpeechResult','')
-    aid=request.args.get('aid',''); caller=request.args.get('caller','')
-    lang=request.args.get('lang','hindi'); ctype=request.args.get('type','sales')
-    call_sid=request.form.get('CallSid','')
+    speech   = request.form.get('SpeechResult', '')
+    aid      = request.args.get('aid', '')
+    caller   = request.args.get('caller', '')
+    lang     = request.args.get('lang', 'hindi')
+    ctype    = request.args.get('type', 'sales')
+    call_sid = request.form.get('CallSid', '')
+
     if not speech:
-        resp=VoiceResponse()
-        g2=Gather(input='speech',language='hi-IN',speech_timeout='auto',
-                 action=f'/handle-speech?aid={aid}&caller={caller}&lang={lang}&type={ctype}',method='POST')
-        g2.say("Samajh nahi aaya, phir bolein." if lang=='hindi' else "Samajhle nahi, parat sanga.",voice='Polly.Aditi',language='hi-IN')
-        resp.append(g2); return Response(str(resp),mimetype='text/xml')
-    detected=detect_lang(speech)
-    if detected!=lang: lang=detected
-    agent=next((a for a in cached_contacts if a['agent_id']==aid),None)
-    if any(w in speech.lower() for w in ['prashant','transfer','manager','प्रशांत']):
+        resp = VoiceResponse()
+        g2 = Gather(input='speech', language='hi-IN', speech_timeout='auto',
+                    action=f'/handle-speech?aid={aid}&caller={caller}&lang={lang}&type={ctype}', method='POST')
+        g2.say("Samajh nahi aaya, phir bolein." if lang == 'hindi' else "Samajhle nahi, parat sanga.",
+               voice='Polly.Aditi', language='hi-IN')
+        resp.append(g2)
+        return Response(str(resp), mimetype='text/xml')
+
+    detected = detect_lang(speech)
+    if detected != lang:
+        lang = detected
+    agent = next((a for a in cached_contacts if a['agent_id'] == aid), None)
+    if any(w in speech.lower() for w in ['prashant', 'transfer', 'manager', 'प्रशांत']):
         return do_transfer(lang)
-    ai_reply,need_tr=priya_reply(speech,agent,call_sid,lang,ctype)
-    if need_tr: return do_transfer(lang)
-    resp=VoiceResponse()
-    g2=Gather(input='speech',language='hi-IN',speech_timeout='auto',
-             action=f'/handle-speech?aid={aid}&caller={caller}&lang={lang}&type={ctype}',method='POST')
-    g2.say(ai_reply,voice='Polly.Aditi',language='hi-IN'); resp.append(g2)
-    return Response(str(resp),mimetype='text/xml')
+    ai_reply, need_tr = priya_reply(speech, agent, call_sid, lang, ctype)
+    if need_tr:
+        return do_transfer(lang)
+    resp = VoiceResponse()
+    g2 = Gather(input='speech', language='hi-IN', speech_timeout='auto',
+                action=f'/handle-speech?aid={aid}&caller={caller}&lang={lang}&type={ctype}', method='POST')
+    g2.say(ai_reply, voice='Polly.Aditi', language='hi-IN')
+    resp.append(g2)
+    return Response(str(resp), mimetype='text/xml')
 
-@app.route('/call-status',methods=['POST'])
+@app.route('/call-status', methods=['POST'])
 def call_status():
-    print(f"📊 {request.form.get('To')}: {request.form.get('CallStatus')}"); return '',200
+    print(f"📊 {request.form.get('To')}: {request.form.get('CallStatus')}")
+    return '', 200
 
-# ── OUTGOING CALLS (10AM-6PM ONLY) ───────────────────────────
-def make_outgoing(phone,msg):
-    if not twilio_client: return None
+# ── OUTGOING CALLS ────────────────────────────────────────────
+def make_outgoing(phone, msg):
+    if not twilio_client:
+        return None
     try:
-        return twilio_client.calls.create(to=phone,from_=TWILIO_FROM_NUMBER,
+        return twilio_client.calls.create(
+            to=phone, from_=TWILIO_FROM_NUMBER,
             twiml=f'<Response><Say voice="Polly.Aditi" language="hi-IN">{msg}</Say></Response>')
     except Exception as e:
-        print(f"Call err: {e}"); return None
+        print(f"Call err: {e}")
+        return None
 
-@app.route('/make-call',methods=['POST'])
+@app.route('/make-call', methods=['POST'])
 def make_call():
-    data=request.json or {}; phone=str(data.get('phone','')); name=data.get('name','Agent'); lang=data.get('language','hindi')
-    if not is_calling_hours(): return calling_blocked(lang)
-    if len(phone)==10: phone='+91'+phone
-    fn=name.split()[0].title()
-    msg=data.get('message',f"{'नमस्ते '+fn+' जी! मी प्रिया.' if lang=='marathi' else 'Namaste '+fn+' ji! Main Priya.'}")
-    c=make_outgoing(phone,msg)
-    return jsonify({'success':bool(c),'call_sid':c.sid if c else None})
+    data  = request.json or {}
+    phone = str(data.get('phone', ''))
+    name  = data.get('name', 'Agent')
+    lang  = data.get('language', 'hindi')
+    if not is_calling_hours():
+        return calling_blocked(lang)
+    if len(phone) == 10:
+        phone = '+91' + phone
+    fn  = name.split()[0].title()
+    msg = data.get('message',
+          f"{'नमस्ते '+fn+' जी! मी प्रिया.' if lang=='marathi' else 'Namaste '+fn+' ji! Main Priya.'}")
+    c = make_outgoing(phone, msg)
+    return jsonify({'success': bool(c), 'call_sid': c.sid if c else None})
 
-@app.route('/daily-collection',methods=['POST'])
+@app.route('/daily-collection', methods=['POST'])
 def daily_collection():
-    data=request.json or {}
-    if not is_calling_hours(): return calling_blocked()
-    limit=int(data.get('limit',len(cached_contacts))); reset_daily(); results=[]
+    data  = request.json or {}
+    if not is_calling_hours():
+        return calling_blocked()
+    limit   = int(data.get('limit', len(cached_contacts)))
+    reset_daily()
+    results = []
     for agent in cached_contacts[:limit]:
-        lang=agent.get('language','marathi'); fn=agent['name'].split()[0].title()
-        onb=agent.get('onboarding','pending')
-        if lang=='marathi':
-            if onb in ['pending','']:
-                msg=f"नमस्ते {fn} जी! मी प्रिया. Prashant जींनी पाठवले. आज business आहे का? आणि onboarding documents submit झाले का?"
-            else:
-                msg=f"नमस्ते {fn} जी! मी प्रिया. आज कोणता business आहे? Customer ready असेल तर details द्या!"
+        lang = agent.get('language', 'marathi')
+        fn   = agent['name'].split()[0].title()
+        onb  = agent.get('onboarding', 'pending')
+        if lang == 'marathi':
+            msg = (f"नमस्ते {fn} जी! मी प्रिया. Prashant जींनी पाठवले. आज business आहे का? "
+                   f"आणि onboarding documents submit झाले का?"
+                   if onb in ['pending', ''] else
+                   f"नमस्ते {fn} जी! मी प्रिया. आज कोणता business आहे? Customer ready असेल तर details द्या!")
         else:
-            if onb in ['pending','']:
-                msg=f"Namaste {fn} ji! Main Priya. Prashant ji ne bheja. Aaj business hai? Aur onboarding documents submit ho gaye?"
-            else:
-                msg=f"Namaste {fn} ji! Main Priya. Aaj koi business hai? Customer ready ho toh details do!"
+            msg = (f"Namaste {fn} ji! Main Priya. Prashant ji ne bheja. Aaj business hai? "
+                   f"Aur onboarding documents submit ho gaye?"
+                   if onb in ['pending', ''] else
+                   f"Namaste {fn} ji! Main Priya. Aaj koi business hai? Customer ready ho toh details do!")
         try:
-            c=twilio_client.calls.create(to=agent['phone'],from_=TWILIO_FROM_NUMBER,
-                url=f"https://{request.host}/biz-handler?aid={agent['agent_id']}&lang={lang}&name={fn}",method='POST')
+            c = twilio_client.calls.create(
+                to=agent['phone'], from_=TWILIO_FROM_NUMBER,
+                url=f"https://{request.host}/biz-handler?aid={agent['agent_id']}&lang={lang}&name={fn}",
+                method='POST')
             today_biz['agents_called'].append(agent['agent_id'])
-            results.append({'agent':agent['name'],'status':'calling','sid':c.sid})
+            results.append({'agent': agent['name'], 'status': 'calling', 'sid': c.sid})
         except Exception as e:
-            results.append({'agent':agent['name'],'status':'failed','error':str(e)})
-    return jsonify({'success':True,'called':len([r for r in results if r['status']=='calling']),'results':results})
+            results.append({'agent': agent['name'], 'status': 'failed', 'error': str(e)})
+    return jsonify({'success': True,
+                    'called': len([r for r in results if r['status'] == 'calling']),
+                    'results': results})
 
-@app.route('/biz-handler',methods=['POST'])
+@app.route('/biz-handler', methods=['POST'])
 def biz_handler():
-    aid=request.args.get('aid',''); lang=request.args.get('lang','marathi'); name=request.args.get('name','Agent')
-    agent=next((a for a in cached_contacts if a['agent_id']==aid),None)
-    onb=agent.get('onboarding','pending') if agent else 'pending'
-    if lang=='marathi':
-        if onb in ['pending','']:
-            intro=f"नमस्ते {name} जी! मी प्रिया. आज business काय आहे? आणि तुमचे onboarding documents — Aadhaar, PAN, bank details — submit झाले का?"
-        else:
-            intro=f"नमस्ते {name} जी! मी प्रिया. आज कोणता business आहे? Car, bike, health — customer असेल तर RC details द्या!"
+    aid   = request.args.get('aid', '')
+    lang  = request.args.get('lang', 'marathi')
+    name  = request.args.get('name', 'Agent')
+    agent = next((a for a in cached_contacts if a['agent_id'] == aid), None)
+    onb   = agent.get('onboarding', 'pending') if agent else 'pending'
+    if lang == 'marathi':
+        intro = (f"नमस्ते {name} जी! मी प्रिया. आज business काय आहे? "
+                 f"आणि तुमचे onboarding documents — Aadhaar, PAN, bank details — submit झाले का?"
+                 if onb in ['pending', ''] else
+                 f"नमस्ते {name} जी! मी प्रिया. आज कोणता business आहे? Car, bike, health — customer असेल तर RC details द्या!")
     else:
-        if onb in ['pending','']:
-            intro=f"Namaste {name} ji! Main Priya. Aaj ka business kya hai? Aur aapke onboarding documents — Aadhaar, PAN, bank — submit ho gaye?"
-        else:
-            intro=f"Namaste {name} ji! Main Priya. Aaj koi business hai? Car, bike, health — customer ho toh RC details do!"
-    resp=VoiceResponse()
-    g2=Gather(input='speech',language='hi-IN',speech_timeout='auto',
-             action=f'/handle-speech?aid={aid}&caller=&lang={lang}&type=sales',method='POST')
-    g2.say(intro,voice='Polly.Aditi',language='hi-IN'); resp.append(g2)
-    resp.say("Update nahi mila.",voice='Polly.Aditi',language='hi-IN')
-    return Response(str(resp),mimetype='text/xml')
+        intro = (f"Namaste {name} ji! Main Priya. Aaj ka business kya hai? "
+                 f"Aur aapke onboarding documents — Aadhaar, PAN, bank — submit ho gaye?"
+                 if onb in ['pending', ''] else
+                 f"Namaste {name} ji! Main Priya. Aaj koi business hai? Car, bike, health — customer ho toh RC details do!")
+    resp = VoiceResponse()
+    g2 = Gather(input='speech', language='hi-IN', speech_timeout='auto',
+                action=f'/handle-speech?aid={aid}&caller=&lang={lang}&type=sales', method='POST')
+    g2.say(intro, voice='Polly.Aditi', language='hi-IN')
+    resp.append(g2)
+    resp.say("Update nahi mila.", voice='Polly.Aditi', language='hi-IN')
+    return Response(str(resp), mimetype='text/xml')
 
-@app.route('/welcome-call',methods=['POST'])
+@app.route('/welcome-call', methods=['POST'])
 def welcome_call():
-    data=request.json or {}; phone=str(data.get('phone','')); name=data.get('name','Agent')
-    lang=data.get('language','marathi'); aid=data.get('agent_id','')
-    if not is_calling_hours(): return calling_blocked(lang)
-    if len(phone)==10: phone='+91'+phone
-    fn=name.split()[0].title()
-    if lang=='marathi':
-        msg=f"नमस्ते {fn} जी! PB Partners मध्ये स्वागत! मी प्रिया. Code: {aid}. App download करा. Documents — Aadhaar, PAN, bank details, selfie — WhatsApp करा {PRASHANT['phone']} वर. मदत लागली तर call करा!"
+    data  = request.json or {}
+    phone = str(data.get('phone', ''))
+    name  = data.get('name', 'Agent')
+    lang  = data.get('language', 'marathi')
+    aid   = data.get('agent_id', '')
+    if not is_calling_hours():
+        return calling_blocked(lang)
+    if len(phone) == 10:
+        phone = '+91' + phone
+    fn = name.split()[0].title()
+    if lang == 'marathi':
+        msg = (f"नमस्ते {fn} जी! PB Partners मध्ये स्वागत! मी प्रिया. Code: {aid}. "
+               f"App download करा. Documents — Aadhaar, PAN, bank details, selfie — "
+               f"WhatsApp करा {PRASHANT['phone']} वर. मदत लागली तर call करा!")
     else:
-        msg=f"Namaste {fn} ji! PB Partners mein swagat! Main Priya. Code: {aid}. App download karein. Documents — Aadhaar, PAN, bank, selfie — WhatsApp karein {PRASHANT['phone']} pe. Help chahiye toh call karein!"
-    c=make_outgoing(phone,msg)
-    wa_msg=f"🎉 *PB Partners Welcome!*\nCode: *{aid}*\n\n📋 Documents bhejein:\n🪪 PAN Card\n🪪 Aadhaar (Front+Back)\n🏦 Bank (Cheque/Passbook)\n📄 10th Certificate\n📱 Mobile (Aadhaar linked)\n📧 Email\n🤳 Selfie\n\nWhatsApp: {PRASHANT['wa']}\n— Prashant ji"
-    send_wa(phone,wa_msg)
-    # Update onboarding status
+        msg = (f"Namaste {fn} ji! PB Partners mein swagat! Main Priya. Code: {aid}. "
+               f"App download karein. Documents — Aadhaar, PAN, bank, selfie — "
+               f"WhatsApp karein {PRASHANT['phone']} pe. Help chahiye toh call karein!")
+    c = make_outgoing(phone, msg)
+    wa_msg = (f"🎉 *PB Partners Welcome!*\nCode: *{aid}*\n\n📋 Documents bhejein:\n"
+              f"🪪 PAN Card\n🪪 Aadhaar (Front+Back)\n🏦 Bank (Cheque/Passbook)\n"
+              f"📄 10th Certificate\n📱 Mobile (Aadhaar linked)\n📧 Email\n🤳 Selfie\n\n"
+              f"WhatsApp: {PRASHANT['wa']}\n— Prashant ji")
+    send_wa(phone, wa_msg)
     for a in cached_contacts:
-        if a['phone'].replace('+91','')[-10:]==phone.replace('+91','')[-10:]:
-            a['onboarding']='welcome_done'; break
-    return jsonify({'success':True,'call':c.sid if c else None,'wa_sent':True})
+        if a['phone'].replace('+91', '')[-10:] == phone.replace('+91', '')[-10:]:
+            a['onboarding'] = 'welcome_done'
+            break
+    return jsonify({'success': True, 'call': c.sid if c else None, 'wa_sent': True})
 
-@app.route('/recruitment-call',methods=['POST'])
+@app.route('/recruitment-call', methods=['POST'])
 def recruitment_call():
-    data=request.json or {}; phone=str(data.get('phone','')); name=data.get('name','ji')
-    lang=data.get('language','hindi')
-    if not is_calling_hours(): return calling_blocked(lang)
-    if len(phone)==10: phone='+91'+phone
-    fn=name.split()[0].title() if name!='ji' else 'ji'
-    if lang=='marathi':
-        msg=f"नमस्ते {fn} जी! मी प्रिया, Prashant Chandratre जींच्या वतीने. PB Partners सोबत insurance agent व्हा. 100% free. Free training. चांगले commission. Interest आहे का?"
+    data  = request.json or {}
+    phone = str(data.get('phone', ''))
+    name  = data.get('name', 'ji')
+    lang  = data.get('language', 'hindi')
+    if not is_calling_hours():
+        return calling_blocked(lang)
+    if len(phone) == 10:
+        phone = '+91' + phone
+    fn = name.split()[0].title() if name != 'ji' else 'ji'
+    if lang == 'marathi':
+        msg = (f"नमस्ते {fn} जी! मी प्रिया, Prashant Chandratre जींच्या वतीने. "
+               f"PB Partners सोबत insurance agent व्हा. 100% free. Free training. चांगले commission. Interest आहे का?")
+        wa  = (f"🙏 नमस्ते {fn} जी!\n\nमी प्रिया, {PRASHANT['name']} जींची AI.\n\n"
+               f"🚀 *PB Partners मध्ये join करा!*\n✅ 100% FREE\n✅ Free Training\n"
+               f"✅ Motor 15-20% commission\n✅ Health 20-25% commission\n\n"
+               f"📋 *Documents:*\n🪪 PAN, 🪪 Aadhaar, 🏦 Bank, 📄 10th, 📱 Mobile, 📧 Email, 🤳 Selfie\n\n"
+               f"📞 {PRASHANT['phone']}\n💬 {PRASHANT['wa']}\n\n_{PRASHANT['note']}_")
     else:
-        msg=f"Namaste {fn} ji! Main Priya, Prashant Chandratre ji ki taraf se. PB Partners ke saath agent banein. 100% free. Free training. Achha commission. Interested hain?"
-    c=make_outgoing(phone,msg)
-    # WhatsApp with full details
-    if lang=='marathi':
-        wa=f"🙏 नमस्ते {fn} जी!\n\nमी प्रिया, {PRASHANT['name']} जींची AI.\n\n🚀 *PB Partners मध्ये join करा!*\n✅ 100% FREE\n✅ Free Training\n✅ Motor 15-20% commission\n✅ Health 20-25% commission\n\n📋 *Documents:*\n🪪 PAN, 🪪 Aadhaar, 🏦 Bank, 📄 10th, 📱 Mobile, 📧 Email, 🤳 Selfie\n\n📞 {PRASHANT['phone']}\n💬 {PRASHANT['wa']}\n\n_{PRASHANT['note']}_"
-    else:
-        wa=f"🙏 Namaste {fn} ji!\n\nMain Priya, {PRASHANT['name']} ji ki AI.\n\n🚀 *PB Partners mein join karein!*\n✅ 100% FREE\n✅ Free Training\n✅ Motor 15-20% commission\n✅ Health 20-25% commission\n\n📋 *Documents:*\n🪪 PAN, 🪪 Aadhaar, 🏦 Bank, 📄 10th, 📱 Mobile, 📧 Email, 🤳 Selfie\n\n📞 {PRASHANT['phone']}\n💬 {PRASHANT['wa']}\n\n_{PRASHANT['note']}_"
-    send_wa(phone,wa)
-    new_prospects[phone]={'name':name,'phone':phone,'lang':lang,'status':'contacted','docs':[],'date':str(date.today())}
+        msg = (f"Namaste {fn} ji! Main Priya, Prashant Chandratre ji ki taraf se. "
+               f"PB Partners ke saath agent banein. 100% free. Free training. Achha commission. Interested hain?")
+        wa  = (f"🙏 Namaste {fn} ji!\n\nMain Priya, {PRASHANT['name']} ji ki AI.\n\n"
+               f"🚀 *PB Partners mein join karein!*\n✅ 100% FREE\n✅ Free Training\n"
+               f"✅ Motor 15-20% commission\n✅ Health 20-25% commission\n\n"
+               f"📋 *Documents:*\n🪪 PAN, 🪪 Aadhaar, 🏦 Bank, 📄 10th, 📱 Mobile, 📧 Email, 🤳 Selfie\n\n"
+               f"📞 {PRASHANT['phone']}\n💬 {PRASHANT['wa']}\n\n_{PRASHANT['note']}_")
+    c = make_outgoing(phone, msg)
+    send_wa(phone, wa)
+    new_prospects[phone] = {'name': name, 'phone': phone, 'lang': lang,
+                            'status': 'contacted', 'docs': [], 'date': str(date.today())}
     wa_p(f"🎯 NEW PROSPECT\n{name} | {phone}\nWA sent ✅")
-    return jsonify({'success':True,'call':c.sid if c else None,'wa_sent':True})
+    return jsonify({'success': True, 'call': c.sid if c else None, 'wa_sent': True})
 
-@app.route('/reminder-call',methods=['POST'])
+@app.route('/reminder-call', methods=['POST'])
 def reminder_call():
-    data=request.json or {}; phone=str(data.get('phone','')); name=data.get('name','Agent'); lang=data.get('language','marathi')
-    if not is_calling_hours(): return calling_blocked(lang)
-    if len(phone)==10: phone='+91'+phone
-    fn=name.split()[0].title(); h=datetime.now().hour
-    # Dark psychology — FOMO + loss aversion
-    pressure=random.choice(["Aaj kai agents ne target hit kiya!","Customer wait kar raha hai!","Month end aa raha hai!"])
-    if lang=='marathi':
-        t='सुप्रभात' if h<12 else ('नमस्ते' if h<17 else 'शुभ संध्या')
-        msg=f"{t} {fn} जी! मी प्रिया. {pressure} आज business आहे का? Customer असेल तर details द्या — quotation काढते!"
+    data  = request.json or {}
+    phone = str(data.get('phone', ''))
+    name  = data.get('name', 'Agent')
+    lang  = data.get('language', 'marathi')
+    if not is_calling_hours():
+        return calling_blocked(lang)
+    if len(phone) == 10:
+        phone = '+91' + phone
+    fn       = name.split()[0].title()
+    h        = datetime.now().hour
+    pressure = random.choice(["Aaj kai agents ne target hit kiya!", "Customer wait kar raha hai!", "Month end aa raha hai!"])
+    if lang == 'marathi':
+        t   = 'सुप्रभात' if h < 12 else ('नमस्ते' if h < 17 else 'शुभ संध्या')
+        msg = f"{t} {fn} जी! मी प्रिया. {pressure} आज business आहे का? Customer असेल तर details द्या — quotation काढते!"
     else:
-        t='Good morning' if h<12 else ('Namaste' if h<17 else 'Good evening')
-        msg=f"{t} {fn} ji! Main Priya. {pressure} Aaj business hai? Customer ho toh details do — quotation nikalungi!"
-    c=make_outgoing(phone,msg)
-    return jsonify({'success':True,'call':c.sid if c else None})
+        t   = 'Good morning' if h < 12 else ('Namaste' if h < 17 else 'Good evening')
+        msg = f"{t} {fn} ji! Main Priya. {pressure} Aaj business hai? Customer ho toh details do — quotation nikalungi!"
+    c = make_outgoing(phone, msg)
+    return jsonify({'success': True, 'call': c.sid if c else None})
 
-@app.route('/call-all',methods=['POST'])
+@app.route('/call-all', methods=['POST'])
 def call_all():
-    data=request.json or {}; limit=int(data.get('limit',5))
-    if not is_calling_hours(): return calling_blocked()
-    results=[]
+    data  = request.json or {}
+    limit = int(data.get('limit', 5))
+    if not is_calling_hours():
+        return calling_blocked()
+    results = []
     for agent in cached_contacts[:limit]:
-        lang=agent.get('language','marathi'); fn=agent['name'].split()[0].title()
-        pressure=random.choice(["Aaj kai agents ne business dila!","Month end hai!","Target miss mat karo!"])
-        if lang=='marathi':
-            msg=data.get('message',f"नमस्ते {fn} जी! मी प्रिया. {pressure} आज business द्या — quotation काढते!")
+        lang     = agent.get('language', 'marathi')
+        fn       = agent['name'].split()[0].title()
+        pressure = random.choice(["Aaj kai agents ne business dila!", "Month end hai!", "Target miss mat karo!"])
+        if lang == 'marathi':
+            msg = data.get('message', f"नमस्ते {fn} जी! मी प्रिया. {pressure} आज business द्या — quotation काढते!")
         else:
-            msg=data.get('message',f"Namaste {fn} ji! Main Priya. {pressure} Aaj business do — quotation nikalungi!")
-        c=make_outgoing(agent['phone'],msg)
-        results.append({'agent':agent['name'],'status':'called' if c else 'failed'})
-    return jsonify({'success':True,'called':len([r for r in results if r['status']=='called']),'results':results})
+            msg = data.get('message', f"Namaste {fn} ji! Main Priya. {pressure} Aaj business do — quotation nikalungi!")
+        c = make_outgoing(agent['phone'], msg)
+        results.append({'agent': agent['name'], 'status': 'called' if c else 'failed'})
+    return jsonify({'success': True,
+                    'called': len([r for r in results if r['status'] == 'called']),
+                    'results': results})
 
-@app.route('/alert-prashant',methods=['POST'])
+@app.route('/alert-prashant', methods=['POST'])
 def alert_prashant():
-    data=request.json or {}; msg=data.get('message','🚨 URGENT from Priya AI')
-    aid=data.get('agent_id','')
-    agent=next((a for a in cached_contacts if a['agent_id']==aid),None)
-    if agent and not data.get('message'): msg=f"🚨 URGENT\n{agent['name']} ko help chahiye!\n{agent['phone']}\nAbhi call karo!"
-    sent=wa_p(msg)
-    c=make_outgoing(PRASHANT_NUMBER,"Namaste Prashant ji! Priya bol rahi hoon. Urgent matter hai. WhatsApp check karein please.")
-    return jsonify({'success':True,'wa_sent':sent,'call':c.sid if c else None})
+    data  = request.json or {}
+    msg   = data.get('message', '🚨 URGENT from Priya AI')
+    aid   = data.get('agent_id', '')
+    agent = next((a for a in cached_contacts if a['agent_id'] == aid), None)
+    if agent and not data.get('message'):
+        msg = f"🚨 URGENT\n{agent['name']} ko help chahiye!\n{agent['phone']}\nAbhi call karo!"
+    sent = wa_p(msg)
+    c    = make_outgoing(PRASHANT_NUMBER,
+                         "Namaste Prashant ji! Priya bol rahi hoon. Urgent matter hai. WhatsApp check karein please.")
+    return jsonify({'success': True, 'wa_sent': sent, 'call': c.sid if c else None})
 
 # ── QUOTE ROUTES ──────────────────────────────────────────────
-@app.route('/quote-request',methods=['POST'])
+@app.route('/quote-request', methods=['POST'])
 def quote_request():
-    data=request.json or {}; aid=data.get('agent_id','')
-    agent=next((a for a in cached_contacts if a['agent_id']==aid),None)
-    q=calc_quote(data.get('vehicle_type','car'),data.get('policy_type','comprehensive'),
-        data.get('year',datetime.now().year-3),data.get('idv'),data.get('ncb_years',0),data.get('has_claim',False))
-    wa_sent=False
+    data  = request.json or {}
+    aid   = data.get('agent_id', '')
+    agent = next((a for a in cached_contacts if a['agent_id'] == aid), None)
+    q     = calc_quote(data.get('vehicle_type', 'car'), data.get('policy_type', 'comprehensive'),
+                       data.get('year', datetime.now().year - 3), data.get('idv'),
+                       data.get('ncb_years', 0), data.get('has_claim', False))
+    wa_sent = False
     if agent:
-        lang=agent.get('language','marathi')
-        m=quote_msg(agent['name'],data.get('customer_name',''),data.get('reg_number',''),data.get('vehicle_type',''),q,lang)
-        wa_sent=send_wa(agent['phone'],m)
-        wa_p(f"📋 QUOTE\n{agent['name']}\n{data.get('customer_name','N/A')} | {data.get('customer_mobile','N/A')}\n{data.get('vehicle_type','')} {data.get('reg_number','')}\n₹{q.get('total_premium',0):,}")
-        active_leads[f"{aid}_{datetime.now().strftime('%H%M')}"]={'agent_id':aid,'agent_name':agent['name'],'case':data,'quotation':q,'time':datetime.now().strftime("%H:%M"),'date':str(date.today())}
-    return jsonify({'success':True,'quotation':q,'wa_sent':wa_sent,'agent':agent['name'] if agent else 'Unknown'})
+        lang    = agent.get('language', 'marathi')
+        m       = quote_msg(agent['name'], data.get('customer_name', ''),
+                            data.get('reg_number', ''), data.get('vehicle_type', ''), q, lang)
+        wa_sent = send_wa(agent['phone'], m)
+        wa_p(f"📋 QUOTE\n{agent['name']}\n"
+             f"{data.get('customer_name','N/A')} | {data.get('customer_mobile','N/A')}\n"
+             f"{data.get('vehicle_type','')} {data.get('reg_number','')}\n"
+             f"₹{q.get('total_premium',0):,}")
+        active_leads[f"{aid}_{datetime.now().strftime('%H%M')}"] = {
+            'agent_id': aid, 'agent_name': agent['name'],
+            'case': data, 'quotation': q,
+            'time': datetime.now().strftime("%H:%M"), 'date': str(date.today())
+        }
+    return jsonify({'success': True, 'quotation': q, 'wa_sent': wa_sent,
+                    'agent': agent['name'] if agent else 'Unknown'})
 
-@app.route('/quote-form',methods=['GET'])
+@app.route('/quote-form', methods=['GET'])
 def quote_form():
-    opts=''.join([f'<option value="{a["agent_id"]}">{a["name"].split()[0].title()} ({a["agent_id"]})</option>' for a in cached_contacts])
+    opts = ''.join([
+        f'<option value="{a["agent_id"]}">{a["name"].split()[0].title()} ({a["agent_id"]})</option>'
+        for a in cached_contacts])
     return f'''<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Priya — Quote</title>
 <style>*{{margin:0;padding:0;box-sizing:border-box;}}body{{font-family:Arial;background:#0d0d0d;color:#F0F0F0;padding:20px;}}
 h1{{color:#E8521A;margin-bottom:4px;font-size:20px;}}.sub{{color:#909090;font-size:13px;margin-bottom:18px;}}
@@ -805,25 +960,45 @@ document.getElementById('rows').innerHTML=rows;document.getElementById('total').
 document.getElementById('st').textContent=d.wa_sent?'✅ WhatsApp sent!':'⚠️ Quote ready (send manually)';document.getElementById('res').style.display='block';
 }}catch(e){{alert('Error: '+e.message);}}finally{{b.textContent='🚀 Generate + WhatsApp';b.disabled=false;}}}}</script></body></html>'''
 
-# ── REPORTS ───────────────────────────────────────────────────
-@app.route('/daily-report',methods=['GET','POST'])
+# ── DAILY REPORT ──────────────────────────────────────────────
+@app.route('/daily-report', methods=['GET', 'POST'])
 def daily_report():
     reset_daily()
-    tp=today_biz['total_premium']; tpl=today_biz['total_policies']
-    tgt=today_biz['target']; prj=today_biz['projected']
-    rep=len(today_biz['agents_reported']); tot=len(cached_contacts)
-    gap=tgt-tp; pct=round((tp/tgt*100),1) if tgt>0 else 0
-    rpt=f"📊 PRIYA AI REPORT\n{today_biz['date']} | {datetime.now().strftime('%H:%M')}\n━━━━━━━━━━━━━━━━━━\n🎯 TARGET: ₹{tgt:,}\n💰 ACHIEVED: ₹{tp:,} ({pct}%)\n📈 PROJECTED: ₹{prj:,}\n📋 POLICIES: {tpl}\n📱 LEADS: {len(active_leads)}\n⚠️ GAP: ₹{gap:,}\n👥 AGENTS: {rep}/{tot}"
-    if today_biz['urgent_agents']: rpt+=f"\n🚨 URGENT: {len(today_biz['urgent_agents'])} agents"
-    if request.method=='POST' or request.args.get('send')=='true': wa_p(rpt)
-    if request.args.get('view')=='html':
-        color='#00C853' if pct>=100 else ('#FFB300' if pct>=60 else '#FF3B3B')
-        ar=''.join([f'<tr><td>{d["name"].split()[0]}</td><td>{d["policies"]}</td><td>₹{d["premium"]:,}</td><td>{d.get("policy_types","—")}</td><td>{"⚠️ "+d["pending"] if d.get("pending") else "✅"}</td><td>{d["time"]}</td></tr>' for d in today_biz['agent_data'].values()])
-        lr=''.join([f'<tr><td>{v["agent_name"].split()[0]}</td><td>{v["case"].get("customer_name","N/A")}</td><td>{v["case"].get("vehicle_type","")}</td><td>{v["quotation"]["policy_type"]}</td><td>₹{v["quotation"].get("total_premium",0):,}</td><td>{v["case"].get("customer_mobile","N/A")}</td><td>{v["time"]}</td></tr>' for v in list(active_leads.values())[-10:]])
-        # Onboarding status
-        ob_p=[a for a in cached_contacts if a.get('onboarding') in ['pending','']]
-        ob_d=[a for a in cached_contacts if a.get('onboarding') not in ['pending','',None]]
-        ob_rows=''.join([f'<tr><td>{a["name"].split()[0]}</td><td style="color:#FF3B3B;">⏳ Pending</td><td style="color:#909090;">{a.get("remarks","—")}</td></tr>' for a in ob_p[:10]])
+    tp  = today_biz['total_premium']
+    tpl = today_biz['total_policies']
+    tgt = today_biz['target']
+    prj = today_biz['projected']
+    rep = len(today_biz['agents_reported'])
+    tot = len(cached_contacts)
+    gap = tgt - tp
+    pct = round((tp / tgt * 100), 1) if tgt > 0 else 0
+    rpt = (f"📊 PRIYA AI REPORT\n{today_biz['date']} | {datetime.now().strftime('%H:%M')}\n"
+           f"━━━━━━━━━━━━━━━━━━\n🎯 TARGET: ₹{tgt:,}\n💰 ACHIEVED: ₹{tp:,} ({pct}%)\n"
+           f"📈 PROJECTED: ₹{prj:,}\n📋 POLICIES: {tpl}\n📱 LEADS: {len(active_leads)}\n"
+           f"⚠️ GAP: ₹{gap:,}\n👥 AGENTS: {rep}/{tot}")
+    if today_biz['urgent_agents']:
+        rpt += f"\n🚨 URGENT: {len(today_biz['urgent_agents'])} agents"
+    if request.method == 'POST' or request.args.get('send') == 'true':
+        wa_p(rpt)
+    if request.args.get('view') == 'html':
+        color  = '#00C853' if pct >= 100 else ('#FFB300' if pct >= 60 else '#FF3B3B')
+        ar     = ''.join([
+            f'<tr><td>{d["name"].split()[0]}</td><td>{d["policies"]}</td><td>₹{d["premium"]:,}</td>'
+            f'<td>{d.get("policy_types","—")}</td>'
+            f'<td>{"⚠️ "+d["pending"] if d.get("pending") else "✅"}</td><td>{d["time"]}</td></tr>'
+            for d in today_biz['agent_data'].values()])
+        lr     = ''.join([
+            f'<tr><td>{v["agent_name"].split()[0]}</td><td>{v["case"].get("customer_name","N/A")}</td>'
+            f'<td>{v["case"].get("vehicle_type","")}</td><td>{v["quotation"]["policy_type"]}</td>'
+            f'<td>₹{v["quotation"].get("total_premium",0):,}</td>'
+            f'<td>{v["case"].get("customer_mobile","N/A")}</td><td>{v["time"]}</td></tr>'
+            for v in list(active_leads.values())[-10:]])
+        ob_p   = [a for a in cached_contacts if a.get('onboarding') in ['pending', '']]
+        ob_d   = [a for a in cached_contacts if a.get('onboarding') not in ['pending', '', None]]
+        ob_rows= ''.join([
+            f'<tr><td>{a["name"].split()[0]}</td><td style="color:#FF3B3B;">⏳ Pending</td>'
+            f'<td style="color:#909090;">{a.get("remarks","—")}</td></tr>'
+            for a in ob_p[:10]])
         return f'''<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Priya Report</title>
 <style>body{{background:#0d0d0d;color:#F0F0F0;font-family:Arial;padding:20px;}}h1{{color:#E8521A;margin-bottom:4px;}}
 .card{{background:#1c1c1c;border-radius:14px;padding:18px;margin-bottom:12px;border:1px solid rgba(255,255,255,.07);}}
@@ -848,9 +1023,7 @@ td{{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.05);}}.btn{{backg
 <div style="flex:1;background:#252525;border-radius:10px;padding:11px;text-align:center;"><div style="font-size:22px;font-weight:900;color:#FF3B3B;">{len(ob_p)}</div><div style="font-size:11px;color:#909090;">Pending</div></div>
 <div style="flex:1;background:#252525;border-radius:10px;padding:11px;text-align:center;"><div style="font-size:22px;font-weight:900;color:#00C853;">{len(ob_d)}</div><div style="font-size:11px;color:#909090;">Done</div></div>
 <div style="flex:1;background:#252525;border-radius:10px;padding:11px;text-align:center;"><div style="font-size:22px;font-weight:900;color:#E8521A;">{len(cached_contacts)}</div><div style="font-size:11px;color:#909090;">Total</div></div>
-</div>
-<table><thead><tr><th>Agent</th><th>Status</th><th>Remarks</th></tr></thead>
-<tbody>{ob_rows}</tbody></table></div>
+</div><table><thead><tr><th>Agent</th><th>Status</th><th>Remarks</th></tr></thead><tbody>{ob_rows}</tbody></table></div>
 <div class="card"><div class="ct">📱 Today Leads</div>
 {"<table><thead><tr><th>Agent</th><th>Customer</th><th>Vehicle</th><th>Policy</th><th>Premium</th><th>Mobile</th><th>Time</th></tr></thead><tbody>"+lr+"</tbody></table>" if lr else "<div style='color:#909090;text-align:center;padding:16px;'>No leads yet</div>"}</div>
 <div class="card"><div class="ct">👥 Agent Business</div>
@@ -859,18 +1032,37 @@ td{{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.05);}}.btn{{backg
 <button class="btn" onclick="fetch('/daily-report',{{method:'POST'}}).then(()=>alert('✅ Sent to Prashant ji!'))">📱 Send Prashant ji</button>
 <button class="btn btn2" onclick="fetch('/daily-collection',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{limit:5}})}}).then(r=>r.json()).then(d=>alert('📞 Calling '+d.called))">📞 Collect Updates</button>
 <a href="/quote-form" class="btn">💰 Quote</a><a href="/agents" class="btn btn2">👥 Agents</a></div></body></html>'''
-    return jsonify({'date':today_biz['date'],'target':tgt,'achieved':tp,'policies':tpl,'projected':prj,'gap':gap,'percentage':pct,'leads':len(active_leads),'report':rpt})
+    return jsonify({'date': today_biz['date'], 'target': tgt, 'achieved': tp,
+                    'policies': tpl, 'projected': prj, 'gap': gap,
+                    'percentage': pct, 'leads': len(active_leads), 'report': rpt})
 
 # ── AGENT MANAGEMENT ──────────────────────────────────────────
-@app.route('/agents',methods=['GET'])
+@app.route('/agents', methods=['GET'])
 def list_agents():
-    search=request.args.get('search','').lower()
-    filt=[a for a in cached_contacts if not search or search in a['name'].lower() or search in a['phone']] if search else cached_contacts
-    onb_colors={'pending':'rgba(255,59,59,.15)','welcome_done':'rgba(255,179,0,.15)','done':'rgba(0,200,83,.15)','active':'rgba(0,200,83,.15)'}
-    onb_text={'pending':'⏳ Pending','welcome_done':'👋 Welcome Done','done':'✅ Done','active':'✅ Active'}
-    rows=''.join([f'<tr><td>{i}</td><td><b>{"&nbsp;&nbsp;└ " if a.get("type")=="SUB_AGENT" else ""}{a["name"].split()[0].title()}</b><br><small style="color:#909090">{a["name"]}</small></td><td style="color:#E8521A;font-family:monospace;">{a["phone"]}</td><td style="color:#909090;">{a["agent_id"]}</td><td><span style="background:{onb_colors.get(a.get("onboarding","pending"),"rgba(255,59,59,.15)")};color:#F0F0F0;padding:2px 8px;border-radius:99px;font-size:10px;">{onb_text.get(a.get("onboarding","pending"),"⏳ Pending")}</span></td><td style="color:#909090;font-size:11px;">{a.get("remarks","—") or "—"}</td><td style="color:#00C853;">₹{today_biz["agent_data"].get(a["agent_id"],{{}}).get("premium",0):,}</td><td><a href="#" onclick="ca(\'{a["agent_id"]}\',\'{a["phone"]}\',\'{a["name"].split()[0].title()}\',\'{a.get("language","marathi")}\')" style="color:#E8521A;text-decoration:none;">📞</a></td></tr>' for i,a in enumerate(filt,1)])
-    pend=len([a for a in cached_contacts if a.get('onboarding') in ['pending','']])
-    done=len([a for a in cached_contacts if a.get('onboarding') not in ['pending','',None]])
+    search = request.args.get('search', '').lower()
+    filt   = ([a for a in cached_contacts if not search or search in a['name'].lower() or search in a['phone']]
+              if search else cached_contacts)
+    onb_colors = {'pending': 'rgba(255,59,59,.15)', 'welcome_done': 'rgba(255,179,0,.15)',
+                  'done': 'rgba(0,200,83,.15)', 'active': 'rgba(0,200,83,.15)'}
+    onb_text   = {'pending': '⏳ Pending', 'welcome_done': '👋 Welcome Done',
+                  'done': '✅ Done', 'active': '✅ Active'}
+    rows = ''.join([
+        f'<tr><td>{i}</td>'
+        f'<td><b>{"&nbsp;&nbsp;└ " if a.get("type")=="SUB_AGENT" else ""}{a["name"].split()[0].title()}</b>'
+        f'<br><small style="color:#909090">{a["name"]}</small></td>'
+        f'<td style="color:#E8521A;font-family:monospace;">{a["phone"]}</td>'
+        f'<td style="color:#909090;">{a["agent_id"]}</td>'
+        f'<td><span style="background:{onb_colors.get(a.get("onboarding","pending"),"rgba(255,59,59,.15)")};'
+        f'color:#F0F0F0;padding:2px 8px;border-radius:99px;font-size:10px;">'
+        f'{onb_text.get(a.get("onboarding","pending"),"⏳ Pending")}</span></td>'
+        f'<td style="color:#909090;font-size:11px;">{a.get("remarks","—") or "—"}</td>'
+        f'<td style="color:#00C853;">₹{today_biz["agent_data"].get(a["agent_id"],{{}}).get("premium",0):,}</td>'
+        f'<td><a href="#" onclick="ca(\'{a["agent_id"]}\',\'{a["phone"]}\','
+        f'\'{a["name"].split()[0].title()}\',\'{a.get("language","marathi")}\')" '
+        f'style="color:#E8521A;text-decoration:none;">📞</a></td></tr>'
+        for i, a in enumerate(filt, 1)])
+    pend = len([a for a in cached_contacts if a.get('onboarding') in ['pending', '']])
+    done = len([a for a in cached_contacts if a.get('onboarding') not in ['pending', '', None]])
     return f'''<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Priya — Agents</title>
 <style>body{{background:#0d0d0d;color:#F0F0F0;font-family:Arial;padding:20px;}}h1{{color:#E8521A;margin-bottom:12px;}}
 .top{{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}}input{{background:#1c1c1c;border:1px solid rgba(232,82,26,.3);border-radius:10px;padding:10px 14px;color:#F0F0F0;font-size:14px;outline:none;flex:1;min-width:200px;}}
@@ -898,10 +1090,10 @@ small{{color:#909090;font-size:10px;}}</style></head>
 </body></html>'''
 
 # ── EXCEL UPLOAD ──────────────────────────────────────────────
-@app.route('/upload-excel',methods=['GET','POST'])
+@app.route('/upload-excel', methods=['GET', 'POST'])
 def upload_excel():
-    if request.method=='GET':
-        pend=len([a for a in cached_contacts if a.get('onboarding') in ['pending','']])
+    if request.method == 'GET':
+        pend = len([a for a in cached_contacts if a.get('onboarding') in ['pending', '']])
         return f'''<!DOCTYPE html><html lang="hi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Priya Upload</title>
 <style>*{{margin:0;padding:0;box-sizing:border-box;}}body{{font-family:Arial;background:#0d0d0d;color:#F0F0F0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}}
 .card{{background:#1c1c1c;border:1px solid rgba(232,82,26,.3);border-radius:20px;padding:28px;width:100%;max-width:480px;}}h1{{color:#E8521A;text-align:center;font-size:20px;margin-bottom:14px;}}
@@ -931,79 +1123,124 @@ button{{width:100%;background:#E8521A;border:none;border-radius:12px;padding:14p
 <div class="links"><a href="/daily-report?view=html" class="link">📊 Report</a><a href="/agents" class="link">👥 Agents</a><a href="/quote-form" class="link">💰 Quote</a><a href="/marketing-page" class="link">🎯 Marketing</a></div>
 </div></body></html>'''
 
-    if not EXCEL_OK: return 'pandas not installed — add to requirements.txt',500
-    if request.form.get('password','')!=UPLOAD_PASSWORD: return '<h2 style="color:red;text-align:center;padding:50px;">Wrong Password!</h2>',403
-    if 'excel_file' not in request.files: return jsonify({'error':'No file'}),400
-    file=request.files['excel_file']
+    if not EXCEL_OK:
+        return 'pandas not installed — add to requirements.txt', 500
+    if request.form.get('password', '') != UPLOAD_PASSWORD:
+        return '<h2 style="color:red;text-align:center;padding:50px;">Wrong Password!</h2>', 403
+    if 'excel_file' not in request.files:
+        return jsonify({'error': 'No file'}), 400
+    file = request.files['excel_file']
     try:
-        fb=file.read()
-        df=pd.read_csv(io.BytesIO(fb)) if file.filename.lower().endswith('.csv') else pd.read_excel(io.BytesIO(fb))
-        new_contacts=[]; skipped=0
-        for _,row in df.iterrows():
-            name=str(row.get('PartnerName') or row.get('Name') or '').strip()
-            phone=str(row.get('PartnerPhoneNumber') or row.get('Phone') or row.get('Mobile') or '').strip()
-            code=str(row.get('PartnerCode') or row.get('Code') or '').strip()
-            rm=str(row.get('RMName') or row.get('RM') or '').strip()
-            city=str(row.get('RMCity') or row.get('City') or 'Nashik').strip()
-            atype=str(row.get('Type') or 'MAIN_AGENT').strip().upper()
-            pcode=str(row.get('ParentAgentCode') or row.get('ParentCode') or '').strip()
-            # NEW: Onboarding + Remarks columns
-            onb_status=str(row.get('Onboarding') or row.get('Meeting Status') or row.get('OnboardingStatus') or 'pending').strip().lower()
-            remarks=str(row.get('Remarks') or row.get('Notes') or '').strip()
-            if onb_status in ['nan','none','']: onb_status='pending'
-            try: pc=str(int(float(phone)))
-            except: pc=phone.replace(' ','').replace('-','')
-            if not pc or len(pc)<10: skipped+=1; continue
-            if not pc.startswith('+'): pc='+91'+pc[-10:]
-            new_contacts.append({'name':name,'phone':pc,'agent_id':code,'rm':rm,'city':city,'language':'marathi','type':atype,'parent_code':pcode,'parent_name':'','onboarding':onb_status,'remarks':remarks})
-        if not new_contacts: return '<h2 style="color:red;text-align:center;padding:50px;">No valid contacts!</h2>'
-        old=len(cached_contacts); cached_contacts.clear(); cached_contacts.extend(new_contacts)
-        pend=len([a for a in new_contacts if a.get('onboarding') in ['pending','']])
-        return f'<html><head><meta charset="UTF-8"><style>body{{background:#0d0d0d;color:#F0F0F0;font-family:Arial;text-align:center;padding:40px;}}.card{{background:#1c1c1c;border:1px solid rgba(0,200,83,.3);border-radius:20px;padding:32px;max-width:400px;margin:0 auto;}}.num{{font-size:60px;font-weight:900;color:#00C853;margin:10px 0;}}h2{{color:#00C853;}}.row{{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #252525;font-size:14px;}}.btn{{display:inline-block;background:#E8521A;color:#fff;padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:800;margin:7px 4px;}}</style></head><body><div class="card"><div style="font-size:44px;">✅</div><h2>Upload Successful!</h2><div class="num">{len(new_contacts)}</div><div style="color:#909090;margin-bottom:16px;">Agents Loaded — Priya Ready!</div><div class="row"><span>Previous</span><span>{old}</span></div><div class="row"><span>New Total</span><span>{len(new_contacts)}</span></div><div class="row"><span>Skipped</span><span>{skipped}</span></div><div class="row"><span>⏳ Onboarding Pending</span><span style="color:#FF3B3B;">{pend}</span></div><a href="/agents" class="btn">👥 View Agents</a><a href="/daily-report?view=html" class="btn" style="background:#252525;border:1px solid rgba(255,255,255,.1);">📊 Report</a></div></body></html>'
+        fb = file.read()
+        df = (pd.read_csv(io.BytesIO(fb)) if file.filename.lower().endswith('.csv')
+              else pd.read_excel(io.BytesIO(fb)))
+        new_contacts = []
+        skipped = 0
+        for _, row in df.iterrows():
+            name       = str(row.get('PartnerName') or row.get('Name') or '').strip()
+            phone      = str(row.get('PartnerPhoneNumber') or row.get('Phone') or row.get('Mobile') or '').strip()
+            code       = str(row.get('PartnerCode') or row.get('Code') or '').strip()
+            rm         = str(row.get('RMName') or row.get('RM') or '').strip()
+            city       = str(row.get('RMCity') or row.get('City') or 'Nashik').strip()
+            atype      = str(row.get('Type') or 'MAIN_AGENT').strip().upper()
+            pcode      = str(row.get('ParentAgentCode') or row.get('ParentCode') or '').strip()
+            onb_status = str(row.get('Onboarding') or row.get('Meeting Status') or
+                             row.get('OnboardingStatus') or 'pending').strip().lower()
+            remarks    = str(row.get('Remarks') or row.get('Notes') or '').strip()
+            if onb_status in ['nan', 'none', '']:
+                onb_status = 'pending'
+            try:
+                pc = str(int(float(phone)))
+            except:
+                pc = phone.replace(' ', '').replace('-', '')
+            if not pc or len(pc) < 10:
+                skipped += 1
+                continue
+            if not pc.startswith('+'):
+                pc = '+91' + pc[-10:]
+            new_contacts.append({'name': name, 'phone': pc, 'agent_id': code, 'rm': rm,
+                                 'city': city, 'language': 'marathi', 'type': atype,
+                                 'parent_code': pcode, 'parent_name': '',
+                                 'onboarding': onb_status, 'remarks': remarks})
+        if not new_contacts:
+            return '<h2 style="color:red;text-align:center;padding:50px;">No valid contacts!</h2>'
+        old = len(cached_contacts)
+        cached_contacts.clear()
+        cached_contacts.extend(new_contacts)
+        pend = len([a for a in new_contacts if a.get('onboarding') in ['pending', '']])
+        return (f'<html><head><meta charset="UTF-8"><style>body{{background:#0d0d0d;color:#F0F0F0;font-family:Arial;text-align:center;padding:40px;}}'
+                f'.card{{background:#1c1c1c;border:1px solid rgba(0,200,83,.3);border-radius:20px;padding:32px;max-width:400px;margin:0 auto;}}'
+                f'.num{{font-size:60px;font-weight:900;color:#00C853;margin:10px 0;}}h2{{color:#00C853;}}'
+                f'.row{{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #252525;font-size:14px;}}'
+                f'.btn{{display:inline-block;background:#E8521A;color:#fff;padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:800;margin:7px 4px;}}</style></head>'
+                f'<body><div class="card"><div style="font-size:44px;">✅</div><h2>Upload Successful!</h2>'
+                f'<div class="num">{len(new_contacts)}</div>'
+                f'<div style="color:#909090;margin-bottom:16px;">Agents Loaded — Priya Ready!</div>'
+                f'<div class="row"><span>Previous</span><span>{old}</span></div>'
+                f'<div class="row"><span>New Total</span><span>{len(new_contacts)}</span></div>'
+                f'<div class="row"><span>Skipped</span><span>{skipped}</span></div>'
+                f'<div class="row"><span>⏳ Onboarding Pending</span><span style="color:#FF3B3B;">{pend}</span></div>'
+                f'<a href="/agents" class="btn">👥 View Agents</a>'
+                f'<a href="/daily-report?view=html" class="btn" style="background:#252525;border:1px solid rgba(255,255,255,.1);">📊 Report</a>'
+                f'</div></body></html>')
     except Exception as e:
         return f'<h2 style="color:red;text-align:center;padding:50px;">Error: {str(e)}</h2>'
 
-# ── ADD / REMOVE AGENT ────────────────────────────────────────
-@app.route('/add-agent',methods=['POST'])
+# ── ADD / REMOVE / UPDATE AGENT ───────────────────────────────
+@app.route('/add-agent', methods=['POST'])
 def add_agent():
-    data=request.json or {}
-    if data.get('password')!=UPLOAD_PASSWORD: return jsonify({'error':'Wrong password'}),403
-    phone=str(data.get('phone','')).strip()
-    if len(phone)==10: phone='+91'+phone
-    if any(a['phone']==phone for a in cached_contacts): return jsonify({'error':'Already exists'}),409
-    new={'name':data.get('name',''),'phone':phone,'agent_id':data.get('agent_id','IP'+str(random.randint(100000,999999))),'rm':data.get('rm',''),'city':data.get('city','Nashik'),'language':data.get('language','marathi'),'type':data.get('type','MAIN_AGENT'),'parent_code':data.get('parent_code',''),'parent_name':'','onboarding':data.get('onboarding','pending'),'remarks':data.get('remarks','')}
+    data = request.json or {}
+    if data.get('password') != UPLOAD_PASSWORD:
+        return jsonify({'error': 'Wrong password'}), 403
+    phone = str(data.get('phone', '')).strip()
+    if len(phone) == 10:
+        phone = '+91' + phone
+    if any(a['phone'] == phone for a in cached_contacts):
+        return jsonify({'error': 'Already exists'}), 409
+    new = {'name': data.get('name', ''), 'phone': phone,
+           'agent_id': data.get('agent_id', 'IP' + str(random.randint(100000, 999999))),
+           'rm': data.get('rm', ''), 'city': data.get('city', 'Nashik'),
+           'language': data.get('language', 'marathi'), 'type': data.get('type', 'MAIN_AGENT'),
+           'parent_code': data.get('parent_code', ''), 'parent_name': '',
+           'onboarding': data.get('onboarding', 'pending'), 'remarks': data.get('remarks', '')}
     cached_contacts.append(new)
-    return jsonify({'success':True,'agent':new,'total':len(cached_contacts)})
+    return jsonify({'success': True, 'agent': new, 'total': len(cached_contacts)})
 
-@app.route('/remove-agent',methods=['POST'])
+@app.route('/remove-agent', methods=['POST'])
 def remove_agent():
-    data=request.json or {}
-    if data.get('password')!=UPLOAD_PASSWORD: return jsonify({'error':'Wrong password'}),403
-    phone=str(data.get('phone','')).replace('+91','')
-    before=len(cached_contacts)
-    idx=[i for i,a in enumerate(cached_contacts) if a['phone'].replace('+91','')==phone]
-    for i in reversed(idx): cached_contacts.pop(i)
-    if len(cached_contacts)==before: return jsonify({'error':'Not found'}),404
-    return jsonify({'success':True,'total':len(cached_contacts)})
+    data  = request.json or {}
+    if data.get('password') != UPLOAD_PASSWORD:
+        return jsonify({'error': 'Wrong password'}), 403
+    phone  = str(data.get('phone', '')).replace('+91', '')
+    before = len(cached_contacts)
+    idx    = [i for i, a in enumerate(cached_contacts) if a['phone'].replace('+91', '') == phone]
+    for i in reversed(idx):
+        cached_contacts.pop(i)
+    if len(cached_contacts) == before:
+        return jsonify({'error': 'Not found'}), 404
+    return jsonify({'success': True, 'total': len(cached_contacts)})
 
-@app.route('/update-agent',methods=['POST'])
+@app.route('/update-agent', methods=['POST'])
 def update_agent():
-    """Update agent onboarding status + remarks"""
-    data=request.json or {}
-    if data.get('password')!=UPLOAD_PASSWORD: return jsonify({'error':'Wrong password'}),403
-    aid=data.get('agent_id','')
+    data = request.json or {}
+    if data.get('password') != UPLOAD_PASSWORD:
+        return jsonify({'error': 'Wrong password'}), 403
+    aid = data.get('agent_id', '')
     for a in cached_contacts:
-        if a['agent_id']==aid:
-            if 'onboarding' in data: a['onboarding']=data['onboarding']
-            if 'remarks' in data: a['remarks']=data['remarks']
-            if 'language' in data: a['language']=data['language']
-            return jsonify({'success':True,'agent':a})
-    return jsonify({'error':'Not found'}),404
+        if a['agent_id'] == aid:
+            if 'onboarding' in data: a['onboarding'] = data['onboarding']
+            if 'remarks'    in data: a['remarks']    = data['remarks']
+            if 'language'   in data: a['language']   = data['language']
+            return jsonify({'success': True, 'agent': a})
+    return jsonify({'error': 'Not found'}), 404
 
-# ── MARKETING ─────────────────────────────────────────────────
-@app.route('/marketing-page',methods=['GET'])
+# ── MARKETING PAGE ────────────────────────────────────────────
+@app.route('/marketing-page', methods=['GET'])
 def marketing_page():
-    docs_html=''.join([f'<div class="di"><span>{d["emoji"]}</span><div><div class="dn">{d["name"]}</div><div class="dd">{d["detail"]}</div></div></div>' for d in DOCS_REQUIRED])
+    docs_html = ''.join([
+        f'<div class="di"><span>{d["emoji"]}</span><div>'
+        f'<div class="dn">{d["name"]}</div><div class="dd">{d["detail"]}</div></div></div>'
+        for d in DOCS_REQUIRED])
     return f'''<!DOCTYPE html><html lang="hi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>PB Partners — Join FREE</title>
 <style>*{{margin:0;padding:0;box-sizing:border-box;}}body{{font-family:Arial;background:#0a1628;color:#F0F0F0;min-height:100vh;}}
 .hero{{background:linear-gradient(135deg,#003087,#0066CC);padding:28px 20px 36px;text-align:center;}}
@@ -1057,52 +1294,76 @@ def marketing_page():
 <div class="note">{PRASHANT["note"]}<br>Priya AI — Prashant Chandratre ji ki Personal AI</div>
 </div></body></html>'''
 
-# ── HOME ──────────────────────────────────────────────────────
-@app.route('/',methods=['GET'])
+# ── MISC ROUTES ───────────────────────────────────────────────
+@app.route('/', methods=['GET'])
 def home():
     reset_daily()
-    pct=round(today_biz['total_premium']/today_biz['target']*100,1) if today_biz['target']>0 else 0
-    pend=len([a for a in cached_contacts if a.get('onboarding') in ['pending','']])
+    pct  = round(today_biz['total_premium'] / today_biz['target'] * 100, 1) if today_biz['target'] > 0 else 0
+    pend = len([a for a in cached_contacts if a.get('onboarding') in ['pending', '']])
     return jsonify({
-        'status':'Priya AI Active ✅','version':'3.0 FINAL',
-        'assistant':'Priya — Prashant Chandratre ji ki AI',
-        'total_agents':len(cached_contacts),
-        'calling_hours':'10:00 AM — 6:00 PM (Incoming 24/7)',
-        'today':{
-            'target':f"₹{today_biz['target']:,}",'achieved':f"₹{today_biz['total_premium']:,}",
-            'percentage':f"{pct}%",'policies':today_biz['total_policies'],'leads':len(active_leads)
+        'status':        'Priya AI Active ✅',
+        'version':       '3.0 FINAL',
+        'assistant':     'Priya — Prashant Chandratre ji ki AI',
+        'total_agents':  len(cached_contacts),
+        'calling_hours': '10:00 AM — 6:00 PM (Incoming 24/7)',
+        'today': {
+            'target':    f"₹{today_biz['target']:,}",
+            'achieved':  f"₹{today_biz['total_premium']:,}",
+            'percentage':f"{pct}%",
+            'policies':  today_biz['total_policies'],
+            'leads':     len(active_leads)
         },
-        'onboarding':{'pending':pend,'done':len(cached_contacts)-pend},
-        'pages':{
-            '/quote-form':'💰 Quote Generator','/daily-report?view=html':'📊 Daily Report',
-            '/agents':'👥 Agents + Onboarding','/upload-excel':'📤 Excel Upload',
-            '/marketing-page':'🎯 360° Marketing Page'
+        'onboarding': {'pending': pend, 'done': len(cached_contacts) - pend},
+        'pages': {
+            '/quote-form':             '💰 Quote Generator',
+            '/daily-report?view=html': '📊 Daily Report',
+            '/agents':                 '👥 Agents + Onboarding',
+            '/upload-excel':           '📤 Excel Upload',
+            '/marketing-page':         '🎯 360° Marketing Page'
         }
     })
 
-@app.route('/get-contacts',methods=['GET'])
-def get_contacts(): return jsonify({'contacts':cached_contacts,'total':len(cached_contacts),'onboarding_pending':len([a for a in cached_contacts if a.get('onboarding') in ['pending','']])})
+@app.route('/get-contacts', methods=['GET'])
+def get_contacts():
+    return jsonify({'contacts': cached_contacts, 'total': len(cached_contacts),
+                    'onboarding_pending': len([a for a in cached_contacts if a.get('onboarding') in ['pending', '']])})
 
-@app.route('/active-leads',methods=['GET'])
-def get_leads(): return jsonify({'leads':list(active_leads.values()),'total':len(active_leads)})
+@app.route('/active-leads', methods=['GET'])
+def get_leads():
+    return jsonify({'leads': list(active_leads.values()), 'total': len(active_leads)})
 
-@app.route('/collect-documents',methods=['POST'])
+@app.route('/collect-documents', methods=['POST'])
 def collect_docs():
-    data=request.json or {}; phone=str(data.get('phone','')).replace('+91',''); name=data.get('name','Agent'); docs=data.get('documents_received',[]); lang=data.get('language','marathi')
-    if not phone: return jsonify({'error':'phone required'}),400
-    if phone not in collected_docs: collected_docs[phone]={'name':name,'phone':phone,'docs':[],'date':str(date.today())}
+    data  = request.json or {}
+    phone = str(data.get('phone', '')).replace('+91', '')
+    name  = data.get('name', 'Agent')
+    docs  = data.get('documents_received', [])
+    lang  = data.get('language', 'marathi')
+    if not phone:
+        return jsonify({'error': 'phone required'}), 400
+    if phone not in collected_docs:
+        collected_docs[phone] = {'name': name, 'phone': phone, 'docs': [], 'date': str(date.today())}
     for d in docs:
-        if d not in collected_docs[phone]['docs']: collected_docs[phone]['docs'].append(d)
-    current=collected_docs[phone]['docs']; all_names=[d['name'] for d in DOCS_REQUIRED]; pending=[d for d in all_names if d not in current]
-    fp='+91'+phone
-    if lang=='marathi':
-        msg=f"📋 *{name} जी — Documents*\n✅ मिळाले: {', '.join(current)}\n{'⏳ बाकी: '+', '.join(pending) if pending else '🎉 सर्व complete!'}\n\nWhatsApp: {PRASHANT['wa']}"
+        if d not in collected_docs[phone]['docs']:
+            collected_docs[phone]['docs'].append(d)
+    current   = collected_docs[phone]['docs']
+    all_names = [d['name'] for d in DOCS_REQUIRED]
+    pending   = [d for d in all_names if d not in current]
+    fp        = '+91' + phone
+    if lang == 'marathi':
+        msg = (f"📋 *{name} जी — Documents*\n✅ मिळाले: {', '.join(current)}\n"
+               f"{'⏳ बाकी: '+', '.join(pending) if pending else '🎉 सर्व complete!'}\n\n"
+               f"WhatsApp: {PRASHANT['wa']}")
     else:
-        msg=f"📋 *{name} ji — Documents*\n✅ Received: {', '.join(current)}\n{'⏳ Pending: '+', '.join(pending) if pending else '🎉 All complete!'}\n\nWhatsApp: {PRASHANT['wa']}"
-    send_wa(fp,msg); wa_p(f"📋 DOCS\n{name}|{phone}\n{len(current)}/7\n{'✅ COMPLETE' if not pending else f'{len(pending)} pending'}")
-    return jsonify({'success':True,'received':current,'pending':pending,'complete':len(pending)==0})
+        msg = (f"📋 *{name} ji — Documents*\n✅ Received: {', '.join(current)}\n"
+               f"{'⏳ Pending: '+', '.join(pending) if pending else '🎉 All complete!'}\n\n"
+               f"WhatsApp: {PRASHANT['wa']}")
+    send_wa(fp, msg)
+    wa_p(f"📋 DOCS\n{name}|{phone}\n{len(current)}/7\n{'✅ COMPLETE' if not pending else f'{len(pending)} pending'}")
+    return jsonify({'success': True, 'received': current, 'pending': pending, 'complete': len(pending) == 0})
 
-if __name__=='__main__':
-    port=int(os.environ.get('PORT',8000))
+# ── ENTRY POINT ───────────────────────────────────────────────
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8000))
     print(f"🤖 Priya AI v3.0 FINAL — Port {port} — {len(cached_contacts)} agents")
-    app.run(host='0.0.0.0',port=port,debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)
