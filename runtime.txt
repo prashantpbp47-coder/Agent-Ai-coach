@@ -1,7 +1,1 @@
-flask
-gunicorn
-twilio
-openai
-requests
-pandas
-openpyxl
+python-3.11.9
