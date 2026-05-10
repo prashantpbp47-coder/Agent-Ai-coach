@@ -946,49 +946,13 @@ def whatsapp_send_all():
         return jsonify({"error": str(e)}), 500
 # ============================================================
 
-import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 
-# ============================================
-# SECTION 1: Buffer storage (for delayed reply)
-# ============================================
-message_buffer = {}
-BUFFER_WAIT_SECONDS = 30
-buffer_lock = threading.Lock()
+# Cooldown tracker
+last_reply_time = {}
+COOLDOWN_MINUTES = 60
 
 
-# ============================================
-# SECTION 2: Delayed reply function (for documents/text)
-# ============================================
-def process_buffered_messages(phone):
-    with buffer_lock:
-        if phone not in message_buffer:
-            return
-        msg_count = len(message_buffer[phone]["messages"])
-        del message_buffer[phone]
-    
-    if msg_count == 0:
-        return
-    
-    if msg_count > 1:
-        reply = f"""धन्यवाद! आपले सर्व {msg_count} messages आणि documents मिळाले. ✅
-
-Prashant ji 30 minutes मध्ये review करून आपल्याशी संपर्क साधतील.
-
-- Priya, PB Partners"""
-    else:
-        reply = """धन्यवाद! आपला message मिळाला. ✅
-
-Prashant ji लवकरच आपल्याशी संपर्क साधतील.
-
-- Priya, PB Partners"""
-    
-    send_text_message(phone, reply)
-
-
-# ============================================
-# SECTION 3: Main webhook (instant reply for buttons)
-# ============================================
 @app.route("/whatsapp-webhook", methods=["POST", "GET"])
 def whatsapp_webhook():
     if request.method == "GET":
@@ -1012,7 +976,7 @@ def whatsapp_webhook():
         
         print(f"📩 From {from_phone}: '{user_reply[:50]}'")
         
-        # ----- INSTANT REPLY: Button "Have Motor Case" -----
+        # Button: Have Motor Case - INSTANT
         if "have motor case" in user_reply or "motor case" in user_reply:
             reply = """नमस्कार! 🙏
 
@@ -1028,9 +992,10 @@ Prashant ji 30 minutes मध्ये contact करतील.
 
 - Priya, PB Partners"""
             send_text_message(from_phone, reply)
-            return jsonify({"status": "instant_sent"}), 200
+            last_reply_time[from_phone] = datetime.now()
+            return jsonify({"status": "sent"}), 200
         
-        # ----- INSTANT REPLY: Button "No Case Today" -----
+        # Button: No Case Today - INSTANT
         if "no case" in user_reply:
             reply = """ठीक आहे sir! 🙏
 
@@ -1039,28 +1004,31 @@ Prashant ji 30 minutes मध्ये contact करतील.
 
 - Priya, PB Partners"""
             send_text_message(from_phone, reply)
-            return jsonify({"status": "instant_sent"}), 200
+            last_reply_time[from_phone] = datetime.now()
+            return jsonify({"status": "sent"}), 200
         
-        # ----- DELAYED REPLY: Documents/Text (30 sec buffer) -----
-        with buffer_lock:
-            if from_phone not in message_buffer:
-                message_buffer[from_phone] = {"messages": [], "timer": None}
-            
-            message_buffer[from_phone]["messages"].append(message_text or "[media]")
-            
-            if message_buffer[from_phone].get("timer"):
-                message_buffer[from_phone]["timer"].cancel()
-            
-            timer = threading.Timer(BUFFER_WAIT_SECONDS, process_buffered_messages, args=[from_phone])
-            timer.daemon = True
-            timer.start()
-            message_buffer[from_phone]["timer"] = timer
+        # Documents/Text: Pehla reply karo, baaki 1 hour ignore
+        now = datetime.now()
+        if from_phone in last_reply_time:
+            time_diff = now - last_reply_time[from_phone]
+            if time_diff < timedelta(minutes=COOLDOWN_MINUTES):
+                print(f"⏸️ Cooldown active for {from_phone}")
+                return jsonify({"status": "cooldown"}), 200
         
-        return jsonify({"status": "buffered"}), 200
+        # First message - reply karo
+        reply = """धन्यवाद! आपला message मिळाला. ✅
+
+Prashant ji लवकरच आपल्याशी संपर्क साधतील.
+
+- Priya, PB Partners"""
+        send_text_message(from_phone, reply)
+        last_reply_time[from_phone] = now
+        
+        return jsonify({"status": "sent"}), 200
     
     except Exception as e:
         print(f"❌ Error: {e}")
-        return jsonify({"status": "error", "error": str(e)}), 500
+        return jsonify({"status": "error"}), 500
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     print(f"🤖 Priya AI v4.0 — Port {port} — {len(AGENTS)} agents loaded")
