@@ -823,6 +823,7 @@ body{{font-family:Arial;background:#0a1628;color:#F0F0F0;}}
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "time": datetime.now().isoformat()})
+    
 # ============================================================
 # WHATSAPP AUTOMATION via INTERAKT - Google Sheet Integration
 # ============================================================
