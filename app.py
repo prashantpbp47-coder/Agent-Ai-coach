@@ -945,6 +945,120 @@ def whatsapp_send_all():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 # ============================================================
+
+# ============================================================
+# WHATSAPP WEBHOOK - Auto Reply on Button Click
+# ============================================================
+
+def send_text_message(phone, message):
+    """Plain text reply bhejna agent ko"""
+    if not INTERAKT_API_KEY:
+        return {"status": "error", "error": "API key not set"}
+    
+    clean_phone = phone.lstrip("+").lstrip("0")
+    if clean_phone.startswith("91") and len(clean_phone) == 12:
+        clean_phone = clean_phone[2:]
+    
+    headers = {
+        "Authorization": f"Basic {INTERAKT_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "countryCode": "+91",
+        "phoneNumber": clean_phone,
+        "type": "Text",
+        "data": {
+            "message": message
+        }
+    }
+    
+    try:
+        response = wa_requests.post(INTERAKT_URL, json=payload, headers=headers, timeout=15)
+        return {"status": response.status_code, "response": response.json() if response.text else {}}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.route("/whatsapp-webhook", methods=["POST", "GET"])
+def whatsapp_webhook():
+    """Interakt se reply receive karke auto-respond"""
+    
+    # GET request (Interakt verification ke liye)
+    if request.method == "GET":
+        return jsonify({"status": "webhook active"}), 200
+    
+    try:
+        data = request.get_json() or {}
+        
+        # Interakt webhook structure
+        # data mein "type", "data" hota hai
+        event_type = data.get("type", "")
+        event_data = data.get("data", {})
+        
+        # Agent ka phone number
+        from_phone = event_data.get("customer", {}).get("phone_number", "")
+        if not from_phone:
+            from_phone = event_data.get("from_number", "")
+        
+        # Message content
+        message_data = event_data.get("message", {})
+        message_text = message_data.get("message", "").strip().lower()
+        button_text = message_data.get("button_text", "").strip().lower()
+        
+        # Combine - kuch bhi reply ho
+        user_reply = button_text if button_text else message_text
+        
+        print(f"📩 Webhook received: phone={from_phone}, reply='{user_reply}'")
+        
+        # Auto-reply logic
+        reply_message = None
+        
+        if "have motor case" in user_reply or "motor case" in user_reply:
+            reply_message = """नमस्कार! 🙏
+
+कृपया खालील documents पाठवा:
+
+✅ RC Copy
+✅ जुनी Policy Copy
+✅ PAN Card
+✅ Customer चा Mobile Number
+✅ Vehicle चे Photos (RC आणि Vehicle)
+
+प्रशांत जी 30 minutes मध्ये contact करतील.
+
+- Priya, PB Partners"""
+        
+        elif "no case" in user_reply or "no case today" in user_reply:
+            reply_message = """ठीक आहे sir! 🙏
+
+उद्या सकाळी पुन्हा भेटूया.
+आपला दिवस शुभ असो! 🌞
+
+- Priya, PB Partners"""
+        
+        else:
+            # Free text reply (future mein AI handle karega)
+            reply_message = """धन्यवाद! आपला message मिळाला. ✅
+
+Prashant ji लवकरच आपल्याशी संपर्क साधतील.
+
+- Priya, PB Partners"""
+        
+        # Send reply
+        if reply_message and from_phone:
+            result = send_text_message(from_phone, reply_message)
+            return jsonify({
+                "status": "reply_sent",
+                "to": from_phone,
+                "user_reply": user_reply,
+                "result": result
+            }), 200
+        
+        return jsonify({"status": "no_action", "data": data}), 200
+    
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     print(f"🤖 Priya AI v4.0 — Port {port} — {len(AGENTS)} agents loaded")
