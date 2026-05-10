@@ -946,17 +946,20 @@ def whatsapp_send_all():
         return jsonify({"error": str(e)}), 500
 # ============================================================
 
-# ============================================================
-# Message Buffer - Multiple messages → 1 consolidated reply
-# ============================================================
 import threading
 from datetime import datetime
 
+# ============================================
+# SECTION 1: Buffer storage (for delayed reply)
+# ============================================
 message_buffer = {}
 BUFFER_WAIT_SECONDS = 30
 buffer_lock = threading.Lock()
 
 
+# ============================================
+# SECTION 2: Delayed reply function (for documents/text)
+# ============================================
 def process_buffered_messages(phone):
     with buffer_lock:
         if phone not in message_buffer:
@@ -983,6 +986,9 @@ Prashant ji लवकरच आपल्याशी संपर्क सा�
     send_text_message(phone, reply)
 
 
+# ============================================
+# SECTION 3: Main webhook (instant reply for buttons)
+# ============================================
 @app.route("/whatsapp-webhook", methods=["POST", "GET"])
 def whatsapp_webhook():
     if request.method == "GET":
@@ -1006,7 +1012,7 @@ def whatsapp_webhook():
         
         print(f"📩 From {from_phone}: '{user_reply[:50]}'")
         
-        # Button replies - INSTANT
+        # ----- INSTANT REPLY: Button "Have Motor Case" -----
         if "have motor case" in user_reply or "motor case" in user_reply:
             reply = """नमस्कार! 🙏
 
@@ -1024,6 +1030,7 @@ Prashant ji 30 minutes मध्ये contact करतील.
             send_text_message(from_phone, reply)
             return jsonify({"status": "instant_sent"}), 200
         
+        # ----- INSTANT REPLY: Button "No Case Today" -----
         if "no case" in user_reply:
             reply = """ठीक आहे sir! 🙏
 
@@ -1034,7 +1041,7 @@ Prashant ji 30 minutes मध्ये contact करतील.
             send_text_message(from_phone, reply)
             return jsonify({"status": "instant_sent"}), 200
         
-        # All other messages - BUFFER (30 sec, single reply)
+        # ----- DELAYED REPLY: Documents/Text (30 sec buffer) -----
         with buffer_lock:
             if from_phone not in message_buffer:
                 message_buffer[from_phone] = {"messages": [], "timer": None}
