@@ -823,7 +823,123 @@ body{{font-family:Arial;background:#0a1628;color:#F0F0F0;}}
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "time": datetime.now().isoformat()})
+# ============================================================
+# WHATSAPP AUTOMATION via INTERAKT - Google Sheet Integration
+# ============================================================
+import csv
+import io
+import requests as wa_requests
 
+INTERAKT_API_KEY = os.environ.get("INTERAKT_API_KEY")
+INTERAKT_URL = "https://api.interakt.ai/v1/public/message/"
+GOOGLE_SHEET_URL = os.environ.get("GOOGLE_SHEET_URL")
+
+
+def fetch_agents_from_sheet():
+    if not GOOGLE_SHEET_URL:
+        raise Exception("GOOGLE_SHEET_URL not set")
+    
+    response = wa_requests.get(GOOGLE_SHEET_URL, timeout=15)
+    response.raise_for_status()
+    
+    csv_data = io.StringIO(response.text)
+    reader = csv.DictReader(csv_data)
+    
+    agents = []
+    for row in reader:
+        name = row.get("name", "").strip()
+        phone = row.get("phone", "").strip()
+        language = row.get("language", "marathi").strip().lower()
+        status = row.get("status", "").strip().lower()
+        
+        if name and phone and status == "active":
+            agents.append({
+                "ip_code": row.get("ip_code", "").strip(),
+                "name": name,
+                "phone": phone,
+                "language": language,
+                "city": row.get("city", "").strip()
+            })
+    
+    return agents
+
+
+def send_whatsapp_template(name, phone, language="marathi"):
+    if language == "hindi":
+        template_name = "daily_motor_support_hindi"
+    else:
+        template_name = "daily_motor_support_marathi"
+    
+    if not INTERAKT_API_KEY:
+        return {"name": name, "phone": phone, "status": "error", "error": "INTERAKT_API_KEY not set"}
+    
+    headers = {
+        "Authorization": f"Basic {INTERAKT_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "countryCode": "+91",
+        "phoneNumber": phone,
+        "type": "Template",
+        "template": {
+            "name": template_name,
+            "languageCode": "en"
+        }
+    }
+    
+    try:
+        response = wa_requests.post(INTERAKT_URL, json=payload, headers=headers, timeout=15)
+        return {
+            "name": name,
+            "phone": phone,
+            "language": language,
+            "template": template_name,
+            "status_code": response.status_code,
+            "status": "sent" if response.status_code == 200 else "failed",
+            "response": response.json() if response.text else {}
+        }
+    except Exception as e:
+        return {"name": name, "phone": phone, "status": "error", "error": str(e)}
+
+
+@app.route("/agents-list", methods=["GET"])
+def whatsapp_agents_list():
+    try:
+        agents = fetch_agents_from_sheet()
+        return jsonify({"total_active": len(agents), "agents": agents})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/send-whatsapp-test", methods=["GET", "POST"])
+def whatsapp_test():
+    result = send_whatsapp_template("Prashant", "917709446589", "marathi")
+    return jsonify(result)
+
+
+@app.route("/send-whatsapp-all", methods=["GET", "POST"])
+def whatsapp_send_all():
+    try:
+        agents = fetch_agents_from_sheet()
+        if not agents:
+            return jsonify({"error": "No active agents found"}), 404
+        
+        results = []
+        for agent in agents:
+            result = send_whatsapp_template(agent["name"], agent["phone"], agent["language"])
+            results.append(result)
+        
+        sent = sum(1 for r in results if r["status"] == "sent")
+        return jsonify({
+            "total_agents": len(agents),
+            "sent": sent,
+            "failed": len(results) - sent,
+            "details": results
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+# ============================================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     print(f"🤖 Priya AI v4.0 — Port {port} — {len(AGENTS)} agents loaded")
