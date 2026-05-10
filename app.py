@@ -952,79 +952,41 @@ def whatsapp_send_all():
 import threading
 from datetime import datetime
 
-message_buffer = {}  # {phone: {messages: [...], timer: ..., first_time: ...}}
-BUFFER_WAIT_SECONDS = 30  # Agent ke last message ke baad 30 sec wait
+message_buffer = {}
+BUFFER_WAIT_SECONDS = 30
 buffer_lock = threading.Lock()
 
 
 def process_buffered_messages(phone):
-    """30 sec silence ke baad consolidated reply bhejo"""
     with buffer_lock:
         if phone not in message_buffer:
             return
-        
-        buffered_data = message_buffer[phone]
-        all_messages = buffered_data["messages"]
-        
-        # Clear buffer FIRST (taaki naye message naya cycle start kar sake)
+        all_messages = message_buffer[phone]["messages"]
         del message_buffer[phone]
     
     if not all_messages:
         return
     
-    print(f"🔔 Processing buffered messages for {phone}: {len(all_messages)} messages")
+    msg_count = len(all_messages)
     
-    # Smart reply based on content
-    combined_text = " ".join(all_messages).lower()
-    
-    if "have motor case" in combined_text or "motor case" in combined_text:
-        reply = """नमस्कार! 🙏
+    if msg_count > 1:
+        reply = f"""धन्यवाद! आपले सर्व {msg_count} messages आणि documents मिळाले. ✅
 
-कृपया खालील documents पाठवा:
-
-✅ RC Copy
-✅ जुनी Policy Copy
-✅ PAN Card
-✅ Customer चा Mobile Number
-✅ Vehicle चे Photos
-
-Prashant ji 30 minutes मध्ये contact करतील.
+Prashant ji 30 minutes मध्ये review करून आपल्याशी संपर्क साधतील.
 
 - Priya, PB Partners"""
-    
-    elif "no case" in combined_text:
-        reply = """ठीक आहे sir! 🙏
-
-उद्या सकाळी पुन्हा भेटूया.
-आपला दिवस शुभ असो! 🌞
-
-- Priya, PB Partners"""
-    
     else:
-        # Multiple messages / documents / free text
-        msg_count = len(all_messages)
-        if msg_count > 1:
-            reply = f"""धन्यवाद! आपले सर्व {msg_count} messages मिळाले. ✅
-
-Prashant ji लवकरच review करून आपल्याशी संपर्क साधतील.
-
-- Priya, PB Partners"""
-        else:
-            reply = """धन्यवाद! आपला message मिळाला. ✅
+        reply = """धन्यवाद! आपला message मिळाला. ✅
 
 Prashant ji लवकरच आपल्याशी संपर्क साधतील.
 
 - Priya, PB Partners"""
     
-    # Send single reply
     send_text_message(phone, reply)
-    print(f"✅ Reply sent to {phone}")
 
 
 @app.route("/whatsapp-webhook", methods=["POST", "GET"])
 def whatsapp_webhook():
-    """Interakt webhook - buffer messages, send 1 consolidated reply"""
-    
     if request.method == "GET":
         return jsonify({"status": "webhook active"}), 200
     
@@ -1039,14 +1001,44 @@ def whatsapp_webhook():
         message_data = event_data.get("message", {})
         message_text = message_data.get("message", "").strip()
         button_text = message_data.get("button_text", "").strip()
-        user_reply = button_text if button_text else message_text
         
         if not from_phone:
             return jsonify({"status": "no_phone"}), 200
         
-        print(f"📩 Received from {from_phone}: '{user_reply[:50]}...'")
+        print(f"📩 From {from_phone}: button='{button_text}' text='{message_text[:50]}'")
         
-        # Add to buffer with thread safety
+        if button_text:
+            button_lower = button_text.lower()
+            
+            if "have motor case" in button_lower or "motor case" in button_lower:
+                reply = """नमस्कार! 🙏
+
+कृपया खालील documents पाठवा:
+
+✅ RC Copy
+✅ जुनी Policy Copy
+✅ PAN Card
+✅ Customer चा Mobile Number
+✅ Vehicle चे Photos
+
+Prashant ji 30 minutes मध्ये contact करतील.
+
+- Priya, PB Partners"""
+                
+                send_text_message(from_phone, reply)
+                return jsonify({"status": "instant_reply_sent"}), 200
+            
+            elif "no case" in button_lower:
+                reply = """ठीक आहे sir! 🙏
+
+उद्या सकाळी पुन्हा भेटूया.
+आपला दिवस शुभ असो! 🌞
+
+- Priya, PB Partners"""
+                
+                send_text_message(from_phone, reply)
+                return jsonify({"status": "instant_reply_sent"}), 200
+        
         with buffer_lock:
             if from_phone not in message_buffer:
                 message_buffer[from_phone] = {
@@ -1055,28 +1047,21 @@ def whatsapp_webhook():
                     "timer": None
                 }
             
-            # Add message to buffer
-            message_buffer[from_phone]["messages"].append(user_reply or "[media]")
+            message_buffer[from_phone]["messages"].append(message_text or "[media]")
             
-            # Cancel previous timer (agar tha)
             if message_buffer[from_phone].get("timer"):
                 message_buffer[from_phone]["timer"].cancel()
             
-            # Start new 30-second timer
             timer = threading.Timer(
-                BUFFER_WAIT_SECONDS, 
-                process_buffered_messages, 
+                BUFFER_WAIT_SECONDS,
+                process_buffered_messages,
                 args=[from_phone]
             )
             timer.daemon = True
             timer.start()
             message_buffer[from_phone]["timer"] = timer
         
-        return jsonify({
-            "status": "buffered",
-            "phone": from_phone,
-            "buffer_size": len(message_buffer[from_phone]["messages"])
-        }), 200
+        return jsonify({"status": "buffered"}), 200
     
     except Exception as e:
         print(f"❌ Webhook error: {e}")
