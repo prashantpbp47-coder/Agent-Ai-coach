@@ -948,7 +948,6 @@ def whatsapp_send_all():
 
 from datetime import datetime, timedelta
 
-# Cooldown tracker
 last_reply_time = {}
 COOLDOWN_MINUTES = 60
 
@@ -976,7 +975,6 @@ def whatsapp_webhook():
         
         print(f"📩 From {from_phone}: '{user_reply[:50]}'")
         
-        # Button: Have Motor Case - INSTANT
         if "have motor case" in user_reply or "motor case" in user_reply:
             reply = """नमस्कार! 🙏
 
@@ -995,7 +993,6 @@ Prashant ji 30 minutes मध्ये contact करतील.
             last_reply_time[from_phone] = datetime.now()
             return jsonify({"status": "sent"}), 200
         
-        # Button: No Case Today - INSTANT
         if "no case" in user_reply:
             reply = """ठीक आहे sir! 🙏
 
@@ -1007,7 +1004,6 @@ Prashant ji 30 minutes मध्ये contact करतील.
             last_reply_time[from_phone] = datetime.now()
             return jsonify({"status": "sent"}), 200
         
-        # Documents/Text: Pehla reply karo, baaki 1 hour ignore
         now = datetime.now()
         if from_phone in last_reply_time:
             time_diff = now - last_reply_time[from_phone]
@@ -1015,7 +1011,6 @@ Prashant ji 30 minutes मध्ये contact करतील.
                 print(f"⏸️ Cooldown active for {from_phone}")
                 return jsonify({"status": "cooldown"}), 200
         
-        # First message - reply karo
         reply = """धन्यवाद! आपला message मिळाला. ✅
 
 Prashant ji लवकरच आपल्याशी संपर्क साधतील.
