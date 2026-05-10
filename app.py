@@ -889,7 +889,7 @@ def send_whatsapp_template(name, phone, language="marathi"):
         "type": "Template",
         "template": {
             "name": template_name,
-            "languageCode": "mr_IN" if language == "marathi" else "hi_IN"
+            https://agent-ai-coach-vy02.onrender.com/send-whatsapp-test
         }
     }
     
