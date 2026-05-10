@@ -889,7 +889,7 @@ def send_whatsapp_template(name, phone, language="marathi"):
         "type": "Template",
         "template": {
             "name": template_name,
-            "languageCode": "en"
+            "languageCode": "mr_IN" if language == "marathi" else "hi_IN"
         }
     }
     
