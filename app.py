@@ -961,13 +961,11 @@ def process_buffered_messages(phone):
     with buffer_lock:
         if phone not in message_buffer:
             return
-        all_messages = message_buffer[phone]["messages"]
+        msg_count = len(message_buffer[phone]["messages"])
         del message_buffer[phone]
     
-    if not all_messages:
+    if msg_count == 0:
         return
-    
-    msg_count = len(all_messages)
     
     if msg_count > 1:
         reply = f"""धन्यवाद! आपले सर्व {msg_count} messages आणि documents मिळाले. ✅
@@ -999,19 +997,18 @@ def whatsapp_webhook():
             from_phone = event_data.get("from_number", "")
         
         message_data = event_data.get("message", {})
-        message_text = message_data.get("message", "").strip()
-        button_text = message_data.get("button_text", "").strip()
+        message_text = message_data.get("message", "").strip().lower()
+        button_text = message_data.get("button_text", "").strip().lower()
+        user_reply = button_text if button_text else message_text
         
         if not from_phone:
             return jsonify({"status": "no_phone"}), 200
         
-        print(f"📩 From {from_phone}: button='{button_text}' text='{message_text[:50]}'")
+        print(f"📩 From {from_phone}: '{user_reply[:50]}'")
         
-        if button_text:
-            button_lower = button_text.lower()
-            
-            if "have motor case" in button_lower or "motor case" in button_lower:
-                reply = """नमस्कार! 🙏
+        # Button replies - INSTANT
+        if "have motor case" in user_reply or "motor case" in user_reply:
+            reply = """नमस्कार! 🙏
 
 कृपया खालील documents पाठवा:
 
@@ -1024,39 +1021,30 @@ def whatsapp_webhook():
 Prashant ji 30 minutes मध्ये contact करतील.
 
 - Priya, PB Partners"""
-                
-                send_text_message(from_phone, reply)
-                return jsonify({"status": "instant_reply_sent"}), 200
-            
-            elif "no case" in button_lower:
-                reply = """ठीक आहे sir! 🙏
+            send_text_message(from_phone, reply)
+            return jsonify({"status": "instant_sent"}), 200
+        
+        if "no case" in user_reply:
+            reply = """ठीक आहे sir! 🙏
 
 उद्या सकाळी पुन्हा भेटूया.
 आपला दिवस शुभ असो! 🌞
 
 - Priya, PB Partners"""
-                
-                send_text_message(from_phone, reply)
-                return jsonify({"status": "instant_reply_sent"}), 200
+            send_text_message(from_phone, reply)
+            return jsonify({"status": "instant_sent"}), 200
         
+        # All other messages - BUFFER (30 sec, single reply)
         with buffer_lock:
             if from_phone not in message_buffer:
-                message_buffer[from_phone] = {
-                    "messages": [],
-                    "first_time": datetime.now(),
-                    "timer": None
-                }
+                message_buffer[from_phone] = {"messages": [], "timer": None}
             
             message_buffer[from_phone]["messages"].append(message_text or "[media]")
             
             if message_buffer[from_phone].get("timer"):
                 message_buffer[from_phone]["timer"].cancel()
             
-            timer = threading.Timer(
-                BUFFER_WAIT_SECONDS,
-                process_buffered_messages,
-                args=[from_phone]
-            )
+            timer = threading.Timer(BUFFER_WAIT_SECONDS, process_buffered_messages, args=[from_phone])
             timer.daemon = True
             timer.start()
             message_buffer[from_phone]["timer"] = timer
@@ -1064,7 +1052,7 @@ Prashant ji 30 minutes मध्ये contact करतील.
         return jsonify({"status": "buffered"}), 200
     
     except Exception as e:
-        print(f"❌ Webhook error: {e}")
+        print(f"❌ Error: {e}")
         return jsonify({"status": "error", "error": str(e)}), 500
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
