@@ -879,9 +879,13 @@ def send_whatsapp_template(name, phone, language="marathi"):
         "Content-Type": "application/json"
     }
     
+    clean_phone = phone.lstrip("+").lstrip("0")
+    if clean_phone.startswith("91") and len(clean_phone) == 12:
+        clean_phone = clean_phone[2:]
+    
     payload = {
         "countryCode": "+91",
-        "phoneNumber": phone,
+        "phoneNumber": clean_phone,
         "type": "Template",
         "template": {
             "name": template_name,
