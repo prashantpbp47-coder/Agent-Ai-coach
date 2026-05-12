@@ -946,6 +946,9 @@ def whatsapp_send_all():
         return jsonify({"error": str(e)}), 500
 # ============================================================
 
+import time
+import threading
+
 # ============================================================
 # WHATSAPP WEBHOOK - Auto Reply on Button Click
 # ============================================================
@@ -980,42 +983,92 @@ def send_text_message(phone, message):
         return {"status": "error", "error": str(e)}
 
 
+# ============================================================
+# POOLING / COOLING LOGIC - Second message ke baad ke liye
+# ============================================================
+COOLING_PERIOD = 20  # seconds
+user_message_count = {}      # phone -> kitne messages aa chuke hain
+pending_pool = {}            # phone -> {"messages": [...], "timer": Timer}
+pool_lock = threading.Lock()
+
+
+def flush_pooled_reply(phone):
+    """Cooling period ke baad pooled messages ka ek reply bhejna"""
+    with pool_lock:
+        if phone not in pending_pool:
+            return
+        data = pending_pool.pop(phone)
+        messages = data["messages"]
+    
+    combined = " ".join(messages).lower()
+    
+    # Free text / follow-up reply
+    reply_message = """धन्यवाद! आपले सर्व messages मिळाले. ✅
+
+Prashant ji लवकरच आपल्याशी संपर्क साधतील.
+
+- Priya, PB Partners"""
+    
+    result = send_text_message(phone, reply_message)
+    print(f"✅ Pooled reply sent to {phone} ({len(messages)} msgs combined): {result}")
+
+
+def add_to_pool(phone, user_reply):
+    """Message ko pool mein daalo, timer reset karo"""
+    with pool_lock:
+        if phone in pending_pool:
+            pending_pool[phone]["timer"].cancel()
+            pending_pool[phone]["messages"].append(user_reply)
+        else:
+            pending_pool[phone] = {"messages": [user_reply], "timer": None}
+        
+        timer = threading.Timer(COOLING_PERIOD, flush_pooled_reply, args=[phone])
+        timer.daemon = True
+        pending_pool[phone]["timer"] = timer
+        timer.start()
+        
+        print(f"⏳ Pooled msg from {phone}. Pool size: {len(pending_pool[phone]['messages'])}")
+
+
 @app.route("/whatsapp-webhook", methods=["POST", "GET"])
 def whatsapp_webhook():
     """Interakt se reply receive karke auto-respond"""
     
-    # GET request (Interakt verification ke liye)
     if request.method == "GET":
         return jsonify({"status": "webhook active"}), 200
     
     try:
         data = request.get_json() or {}
         
-        # Interakt webhook structure
-        # data mein "type", "data" hota hai
         event_type = data.get("type", "")
         event_data = data.get("data", {})
         
-        # Agent ka phone number
         from_phone = event_data.get("customer", {}).get("phone_number", "")
         if not from_phone:
             from_phone = event_data.get("from_number", "")
         
-        # Message content
         message_data = event_data.get("message", {})
         message_text = message_data.get("message", "").strip().lower()
         button_text = message_data.get("button_text", "").strip().lower()
         
-        # Combine - kuch bhi reply ho
         user_reply = button_text if button_text else message_text
         
         print(f"📩 Webhook received: phone={from_phone}, reply='{user_reply}'")
         
-        # Auto-reply logic
-        reply_message = None
+        # ============================================
+        # Count track karo - pehla message ya nahi?
+        # ============================================
+        count = user_message_count.get(from_phone, 0) + 1
+        user_message_count[from_phone] = count
         
-        if "have motor case" in user_reply or "motor case" in user_reply:
-            reply_message = """नमस्कार! 🙏
+        # ============================================
+        # PEHLA MESSAGE - turant reply (original logic)
+        # ============================================
+        if count == 1:
+            reply_message = None
+            
+            if "have motor case" in user_reply or "motor case" in user_reply:
+                reply_message = """नमस्कार! 🙏
 
 कृपया खालील documents पाठवा:
 
@@ -1028,32 +1081,43 @@ def whatsapp_webhook():
 प्रशांत जी 30 minutes मध्ये contact करतील.
 
 - Priya, PB Partners"""
-        
-        elif "no case" in user_reply or "no case today" in user_reply:
-            reply_message = """ठीक आहे sir! 🙏
+            
+            elif "no case" in user_reply or "no case today" in user_reply:
+                reply_message = """ठीक आहे sir! 🙏
 
 उद्या सकाळी पुन्हा भेटूया.
 आपला दिवस शुभ असो! 🌞
 
 - Priya, PB Partners"""
-        
-        else:
-            # Free text reply (future mein AI handle karega)
-            reply_message = """धन्यवाद! आपला message मिळाला. ✅
+            
+            else:
+                reply_message = """धन्यवाद! आपला message मिळाला. ✅
 
 Prashant ji लवकरच आपल्याशी संपर्क साधतील.
 
 - Priya, PB Partners"""
+            
+            if reply_message and from_phone:
+                result = send_text_message(from_phone, reply_message)
+                return jsonify({
+                    "status": "reply_sent",
+                    "to": from_phone,
+                    "user_reply": user_reply,
+                    "result": result
+                }), 200
         
-        # Send reply
-        if reply_message and from_phone:
-            result = send_text_message(from_phone, reply_message)
-            return jsonify({
-                "status": "reply_sent",
-                "to": from_phone,
-                "user_reply": user_reply,
-                "result": result
-            }), 200
+        # ============================================
+        # SECOND MESSAGE onwards - pooling with cooling
+        # ============================================
+        else:
+            if user_reply and from_phone:
+                add_to_pool(from_phone, user_reply)
+                return jsonify({
+                    "status": "pooled",
+                    "to": from_phone,
+                    "message_count": count,
+                    "cooling_period": COOLING_PERIOD
+                }), 200
         
         return jsonify({"status": "no_action", "data": data}), 200
     
