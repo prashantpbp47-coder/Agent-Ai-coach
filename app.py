@@ -982,18 +982,54 @@ def send_text_message(phone, message):
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
+# ============================================================
+import time
+import threading
 
 # ============================================================
-# POOLING / COOLING LOGIC - Second message ke baad ke liye
+# WHATSAPP WEBHOOK - Auto Reply on Button Click
 # ============================================================
-COOLING_PERIOD = 20  # seconds
-user_message_count = {}      # phone -> kitne messages aa chuke hain
+
+def send_text_message(phone, message):
+    """Plain text reply bhejna agent ko"""
+    if not INTERAKT_API_KEY:
+        return {"status": "error", "error": "API key not set"}
+    
+    clean_phone = phone.lstrip("+").lstrip("0")
+    if clean_phone.startswith("91") and len(clean_phone) == 12:
+        clean_phone = clean_phone[2:]
+    
+    headers = {
+        "Authorization": f"Basic {INTERAKT_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "countryCode": "+91",
+        "phoneNumber": clean_phone,
+        "type": "Text",
+        "data": {"message": message}
+    }
+    
+    try:
+        response = wa_requests.post(INTERAKT_URL, json=payload, headers=headers, timeout=15)
+        return {"status": response.status_code, "response": response.json() if response.text else {}}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# ============================================================
+# STATE TRACKING
+# ============================================================
+COOLING_PERIOD = 20  # seconds - itne silence ke baad reply jayega
+
+first_reply_sent = {}        # phone -> True/False (pehla reply gaya ya nahi)
 pending_pool = {}            # phone -> {"messages": [...], "timer": Timer}
 pool_lock = threading.Lock()
 
 
 def flush_pooled_reply(phone):
-    """Cooling period ke baad pooled messages ka ek reply bhejna"""
+    """Cooling period khatam - aakhri message ke baad ek reply bhejna"""
     with pool_lock:
         if phone not in pending_pool:
             return
@@ -1001,33 +1037,43 @@ def flush_pooled_reply(phone):
         messages = data["messages"]
     
     combined = " ".join(messages).lower()
+    print(f"🔥 Flushing pool for {phone}. Total msgs: {len(messages)}, combined: '{combined}'")
     
-    # Free text / follow-up reply
-    reply_message = """धन्यवाद! आपले सर्व messages मिळाले. ✅
+    # Aakhri message ke liye different reply
+    reply_message = """धन्यवाद sir! 🙏
 
-Prashant ji लवकरच आपल्याशी संपर्क साधतील.
+आपली सर्व माहिती मिळाली आहे. ✅
+Prashant ji 30 minutes मध्ये आपल्याशी संपर्क साधतील.
+
+काही urgent असल्यास direct call करा.
 
 - Priya, PB Partners"""
     
     result = send_text_message(phone, reply_message)
-    print(f"✅ Pooled reply sent to {phone} ({len(messages)} msgs combined): {result}")
+    print(f"✅ Final pooled reply sent to {phone}: {result}")
 
 
 def add_to_pool(phone, user_reply):
-    """Message ko pool mein daalo, timer reset karo"""
+    """Har naye message pe timer reset, messages collect karo"""
     with pool_lock:
         if phone in pending_pool:
-            pending_pool[phone]["timer"].cancel()
+            # Pehle se pool hai - purana timer cancel karo
+            try:
+                pending_pool[phone]["timer"].cancel()
+            except Exception as e:
+                print(f"⚠️ Timer cancel error: {e}")
             pending_pool[phone]["messages"].append(user_reply)
         else:
             pending_pool[phone] = {"messages": [user_reply], "timer": None}
         
+        # Naya timer start karo (har naye message pe reset)
         timer = threading.Timer(COOLING_PERIOD, flush_pooled_reply, args=[phone])
         timer.daemon = True
         pending_pool[phone]["timer"] = timer
         timer.start()
         
-        print(f"⏳ Pooled msg from {phone}. Pool size: {len(pending_pool[phone]['messages'])}")
+        pool_size = len(pending_pool[phone]["messages"])
+        print(f"⏳ Pool updated for {phone}. Size: {pool_size}, Timer reset to {COOLING_PERIOD}s")
 
 
 @app.route("/whatsapp-webhook", methods=["POST", "GET"])
@@ -1039,8 +1085,6 @@ def whatsapp_webhook():
     
     try:
         data = request.get_json() or {}
-        
-        event_type = data.get("type", "")
         event_data = data.get("data", {})
         
         from_phone = event_data.get("customer", {}).get("phone_number", "")
@@ -1053,18 +1097,15 @@ def whatsapp_webhook():
         
         user_reply = button_text if button_text else message_text
         
-        print(f"📩 Webhook received: phone={from_phone}, reply='{user_reply}'")
+        print(f"📩 Webhook: phone={from_phone}, reply='{user_reply}'")
+        
+        if not from_phone or not user_reply:
+            return jsonify({"status": "no_action", "data": data}), 200
         
         # ============================================
-        # Count track karo - pehla message ya nahi?
+        # PEHLA MESSAGE - turant button-based reply
         # ============================================
-        count = user_message_count.get(from_phone, 0) + 1
-        user_message_count[from_phone] = count
-        
-        # ============================================
-        # PEHLA MESSAGE - turant reply (original logic)
-        # ============================================
-        if count == 1:
+        if not first_reply_sent.get(from_phone, False):
             reply_message = None
             
             if "have motor case" in user_reply or "motor case" in user_reply:
@@ -1097,32 +1138,37 @@ Prashant ji लवकरच आपल्याशी संपर्क सा�
 
 - Priya, PB Partners"""
             
-            if reply_message and from_phone:
-                result = send_text_message(from_phone, reply_message)
-                return jsonify({
-                    "status": "reply_sent",
-                    "to": from_phone,
-                    "user_reply": user_reply,
-                    "result": result
-                }), 200
+            # Mark karo ki pehla reply ja chuka hai
+            first_reply_sent[from_phone] = True
+            
+            result = send_text_message(from_phone, reply_message)
+            return jsonify({
+                "status": "first_reply_sent",
+                "to": from_phone,
+                "result": result
+            }), 200
         
         # ============================================
-        # SECOND MESSAGE onwards - pooling with cooling
+        # 2nd, 3rd, 4th... message - SAB POOL MEIN
+        # Timer har baar reset - jab silence ho tab ek reply
         # ============================================
         else:
-            if user_reply and from_phone:
-                add_to_pool(from_phone, user_reply)
-                return jsonify({
-                    "status": "pooled",
-                    "to": from_phone,
-                    "message_count": count,
-                    "cooling_period": COOLING_PERIOD
-                }), 200
-        
-        return jsonify({"status": "no_action", "data": data}), 200
+            add_to_pool(from_phone, user_reply)
+            return jsonify({
+                "status": "pooled_waiting_for_silence",
+                "to": from_phone,
+                "pool_size": len(pending_pool.get(from_phone, {}).get("messages", [])),
+                "cooling_period": COOLING_PERIOD
+            }), 200
     
     except Exception as e:
+        print(f"❌ Webhook error: {e}")
         return jsonify({"status": "error", "error": str(e)}), 500
+
+# ============================================================
+# POOLING / COOLING LOGIC - Last message ke baad ke liye
+# ============================================================
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     print(f"🤖 Priya AI v4.0 — Port {port} — {len(AGENTS)} agents loaded")
