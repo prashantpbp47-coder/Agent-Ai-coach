@@ -1165,6 +1165,172 @@ Prashant ji लवकरच आपल्याशी संपर्क सा�
         print(f"❌ Webhook error: {e}")
         return jsonify({"status": "error", "error": str(e)}), 500
 
+"""
+============================================================
+APP.PY MEIN ADD KARNE KA CODE
+============================================================
+Yeh sirf NEW code hai jo aapke existing app.py mein
+ADD karna hai. Existing code ko CHHEDNA NAHI hai.
+
+ADDITION LOCATIONS:
+1. Top imports (line 1-20 area)
+2. Configuration (after env vars)
+3. New endpoint (before if __name__ == "__main__")
+============================================================
+"""
+
+# ============================================================
+# ADDITION 1: TOP IMPORTS (existing imports ke baad add karo)
+# ============================================================
+
+from daily_engagement import get_morning_message
+
+# Pandas already installed hai (requirements.txt mein dikha)
+# Twilio bhi already installed hai
+# Sirf yeh new module add karna hai
+
+
+# ============================================================
+# ADDITION 2: TEST AGENTS LIST (configuration area mein)
+# ============================================================
+# PHASE 1: Self test - sirf Prashant Sir ke number pe
+# Baad mein 5 agents add karenge
+TEST_AGENTS_PHASE_1 = [
+    {
+        "name": "Prashant Chandratre",
+        "phone": "917709446589",
+        "language": "marathi",
+        "city": "Pune"
+    },
+]
+
+# PHASE 2: 5 active agents (jab confirm karoge)
+# Bilkul ready format - sirf phone numbers fill karne hain
+TEST_AGENTS_PHASE_2 = [
+    {"name": "Prashant Chandratre", "phone": "917709446589", "language": "marathi", "city": "Pune"},
+    # Niche 5 active agents add karenge jab ready ho:
+    # {"name": "Agent Name 2", "phone": "91XXXXXXXXXX", "language": "marathi", "city": "Nashik"},
+    # {"name": "Agent Name 3", "phone": "91XXXXXXXXXX", "language": "marathi", "city": "Pune"},
+    # {"name": "Agent Name 4", "phone": "91XXXXXXXXXX", "language": "hindi", "city": "Mumbai"},
+    # {"name": "Agent Name 5", "phone": "91XXXXXXXXXX", "language": "marathi", "city": "Nashik"},
+]
+
+
+# ============================================================
+# ADDITION 3: NEW ENDPOINT (if __name__ == "__main__" ke pehle)
+# ============================================================
+
+import time
+from datetime import datetime
+
+@app.route("/api/send-morning-messages", methods=["GET", "POST"])
+def send_morning_messages():
+    """
+    Daily 8 AM cron-job.org se trigger hoga.
+    Test agents ko morning message bhejega.
+    
+    Security: Optional API key check
+    Rate limit: 2 second per message
+    """
+    # Optional security check (production ke liye)
+    secret_key = request.headers.get("X-API-Key") or request.args.get("key")
+    expected_key = os.getenv("MORNING_API_KEY", "pbp-morning-2026")
+    
+    if secret_key != expected_key:
+        return jsonify({"status": "error", "message": "Invalid key"}), 401
+    
+    # Phase select karo (1 = self test, 2 = 5 agents)
+    phase = request.args.get("phase", "1")
+    
+    if phase == "1":
+        agents_list = TEST_AGENTS_PHASE_1
+    else:
+        agents_list = TEST_AGENTS_PHASE_2
+    
+    results = []
+    sent_count = 0
+    failed_count = 0
+    
+    print(f"🌅 Morning messages job started at {datetime.now()}")
+    print(f"📋 Target: {len(agents_list)} agents (Phase {phase})")
+    
+    for agent in agents_list:
+        try:
+            # Generate personalized message
+            message = get_morning_message(
+                agent_name=agent['name'],
+                language=agent.get('language', 'marathi')
+            )
+            
+            # Use EXISTING send_text_message function from your app.py
+            result = send_text_message(agent['phone'], message)
+            
+            results.append({
+                "phone": agent['phone'],
+                "name": agent['name'],
+                "status": "sent",
+                "result": str(result)[:200]
+            })
+            sent_count += 1
+            print(f"✅ Sent to {agent['name']} ({agent['phone']})")
+            
+            # Rate limit - 2 seconds between messages
+            time.sleep(2)
+            
+        except Exception as e:
+            results.append({
+                "phone": agent['phone'],
+                "name": agent['name'],
+                "status": "failed",
+                "error": str(e)
+            })
+            failed_count += 1
+            print(f"❌ Failed for {agent['name']}: {e}")
+    
+    summary = {
+        "timestamp": datetime.now().isoformat(),
+        "phase": phase,
+        "total_targeted": len(agents_list),
+        "sent": sent_count,
+        "failed": failed_count,
+        "results": results
+    }
+    
+    print(f"📊 Job complete: {sent_count} sent, {failed_count} failed")
+    return jsonify(summary), 200
+
+
+# ============================================================
+# OPTIONAL: TEST ENDPOINT (for instant testing)
+# ============================================================
+@app.route("/api/test-morning-message", methods=["GET", "POST"])
+def test_morning_message():
+    """
+    Single test message endpoint
+    Usage: /api/test-morning-message?phone=917709446589&name=Prashant&lang=marathi
+    """
+    phone = request.args.get("phone", "917709446589")
+    name = request.args.get("name", "Prashant")
+    language = request.args.get("lang", "marathi")
+    
+    try:
+        message = get_morning_message(name, language)
+        result = send_text_message(phone, message)
+        
+        return jsonify({
+            "status": "success",
+            "phone": phone,
+            "name": name,
+            "language": language,
+            "message_preview": message[:200],
+            "send_result": str(result)[:200]
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e)
+        }), 500
+
 # ============================================================
 # POOLING / COOLING LOGIC - Last message ke baad ke liye
 # ============================================================
