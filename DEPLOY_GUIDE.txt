@@ -218,3 +218,615 @@ GitHub: github.com/prashantpbp47-coder/Agent-Ai-coach
 Upload Password: agentguru2024
 
 ================================================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 1 Complete Deployment Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --pb-blue: #0056d2;
+    --pb-blue-dark: #002966;
+    --pb-gold: #ffd700;
+    --pb-green: #25d366;
+    --pb-red: #ef4444;
+    --pb-orange: #f97316;
+    --pb-purple: #8b5cf6;
+    --cream: #fdfbf5;
+    --ink: #0a1628;
+    --ink-soft: #4a5568;
+    --code-bg: #1e293b;
+    --code-text: #e2e8f0;
+  }
+  body { background: var(--cream); color: var(--ink); font-family: 'Inter', sans-serif; line-height: 1.7; }
+  .container { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+  
+  .hero {
+    background: linear-gradient(135deg, var(--pb-green), #16a34a);
+    color: white;
+    border-radius: 28px;
+    padding: 45px 38px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '🚀';
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    font-size: 130px;
+    opacity: 0.15;
+    line-height: 1;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: var(--pb-gold);
+    color: var(--pb-blue-dark);
+    padding: 6px 18px;
+    border-radius: 30px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 38px;
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .hero h1 .gold { color: var(--pb-gold); font-style: italic; }
+  .hero p { font-size: 15px; opacity: 0.95; max-width: 700px; position: relative; }
+  
+  .section {
+    background: white;
+    border-radius: 22px;
+    padding: 32px 26px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 30px rgba(10, 22, 40, 0.06);
+  }
+  
+  .section h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 900;
+    line-height: 1.15;
+    margin-bottom: 12px;
+  }
+  
+  .section h2 .accent { color: var(--pb-blue); font-style: italic; }
+  
+  .step {
+    background: var(--cream);
+    border-radius: 16px;
+    padding: 22px 20px;
+    margin-bottom: 18px;
+    border-left: 6px solid var(--pb-blue);
+  }
+  
+  .step.done { border-left-color: var(--pb-green); }
+  
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .step-num {
+    background: var(--pb-blue);
+    color: white;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  
+  .step.done .step-num { background: var(--pb-green); }
+  
+  .step h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--pb-blue-dark);
+    line-height: 1.3;
+    flex: 1;
+    min-width: 200px;
+  }
+  
+  .time-tag {
+    background: var(--pb-gold);
+    color: var(--pb-blue-dark);
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  
+  ol, ul { margin-left: 22px; margin-top: 8px; }
+  li { margin-bottom: 6px; font-size: 14px; line-height: 1.7; }
+  li strong { color: var(--pb-blue-dark); }
+  
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 16px 18px;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    overflow-x: auto;
+    margin: 10px 0;
+    line-height: 1.6;
+  }
+  
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(0, 86, 210, 0.1);
+    color: var(--pb-blue-dark);
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  pre code { background: transparent; color: var(--code-text); padding: 0; }
+  
+  .callout {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    border-left: 5px solid var(--pb-gold);
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin: 12px 0;
+    font-size: 13px;
+  }
+  
+  .callout.success {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border-left-color: var(--pb-green);
+  }
+  
+  .callout.info {
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    border-left-color: var(--pb-blue);
+  }
+  
+  .callout.warning {
+    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+    border-left-color: var(--pb-red);
+  }
+  
+  .callout strong { color: var(--pb-blue-dark); }
+  
+  /* MESSAGE PREVIEW */
+  .msg-preview {
+    background: #dcf8c6;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 12px 0;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    font-family: 'Inter', sans-serif;
+    color: var(--ink);
+    border-left: 4px solid var(--pb-green);
+  }
+  
+  /* SUCCESS BADGE */
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0;
+  }
+  
+  .badge {
+    background: var(--pb-green);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  
+  @media (max-width: 700px) {
+    .hero h1 { font-size: 26px; }
+    .hero, .section { padding: 22px 18px; }
+    .section h2 { font-size: 22px; }
+    pre { font-size: 10px; padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">// PHASE 1 — FINAL DEPLOYMENT</div>
+    <h1>Aaj Raat Test <span class="gold">Live</span> Karenge!</h1>
+    <p>30 minute mein aap apne aap pe daily morning message receive karenge. Phase 2 mein 5 agents add karenge. Simple, safe, fast deployment.</p>
+    
+    <div class="badge-row" style="margin-top: 18px;">
+      <span class="badge">✓ Backup Done</span>
+      <span class="badge">✓ Test Branch Done</span>
+      <span class="badge">✓ Code Ready</span>
+      <span class="badge">✓ Templates Ready</span>
+    </div>
+  </div>
+
+  <!-- MESSAGE PREVIEW -->
+  <div class="section">
+    <h2>Yeh <span class="accent">Message</span> Aapko Aayega Kal Subah:</h2>
+    
+    <div class="msg-preview">🌅 शुभ सकाळ Prashant जी!
+
+नवीन आठवडा, नवीन goals! 💪
+
+आजचे challenge:
+✅ कमीत कमी ३ quotes generate करा
+✅ १ pending renewal ला call करा
+✅ एक नवीन customer पर्यंत पोहोचा
+
+लक्षात ठेवा — PBPartners मध्ये Partner Contest मधून up to 3.50% extra reward मिळतो. तुमचा effort = तुमचा reward.
+
+मदत हवी असेल तर मला message करा.
+
+- Prashant Chandratre
+📞 +91 7709446589</div>
+    
+    <p style="font-size: 13px; color: var(--ink-soft); margin-top: 10px;">
+      <strong>Day-wise themes ready hain:</strong> Monday (Goals), Tuesday (Renewal), Wednesday (Cross-Sell), Thursday (Customer Care), Friday (Lead Gen), Saturday (Hustle), Sunday (Reflection). Hindi version bhi available!
+    </p>
+  </div>
+
+  <!-- DEPLOYMENT STEPS -->
+  <div class="section">
+    <h2>4 Simple <span class="accent">Steps</span> — 30 Minutes</h2>
+
+    <!-- STEP 1: ADD daily_engagement.py -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <h3>daily_engagement.py file add karo</h3>
+        <span class="time-tag">⏱ 5 MIN</span>
+      </div>
+      
+      <ol>
+        <li>GitHub repo kholo: <code>github.com/prashantpbp47-coder/Agent-Ai-coach</code></li>
+        <li>Top branch dropdown se <strong>daily-engagement-test</strong> select karo (test branch)</li>
+        <li>Top mein "Add file" → <strong>"Create new file"</strong> click karo</li>
+        <li>Filename: <code>daily_engagement.py</code></li>
+        <li>Code paste karo (niche full code diya hai)</li>
+        <li>Bottom mein "Commit new file" click karo</li>
+        <li>Commit message: <code>Add daily_engagement module</code></li>
+        <li>✅ Branch: <strong>daily-engagement-test</strong> select hona chahiye</li>
+        <li><strong>Commit changes</strong> click karo</li>
+      </ol>
+      
+      <div class="callout warning">
+        <strong>⚠️ Important:</strong> Ensure <strong>daily-engagement-test</strong> branch select hai, NOT main!
+      </div>
+    </div>
+
+    <!-- STEP 2: UPDATE app.py -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <h3>app.py mein 3 sections add karo</h3>
+        <span class="time-tag">⏱ 10 MIN</span>
+      </div>
+      
+      <ol>
+        <li>Same <strong>daily-engagement-test</strong> branch pe rehna</li>
+        <li><code>app.py</code> file kholo</li>
+        <li>Pencil icon (Edit) click karo</li>
+        <li>Niche diye gaye 3 sections add karo</li>
+      </ol>
+      
+      <strong>SECTION A: Top imports (existing imports ke baad)</strong>
+      <pre><code>from daily_engagement import get_morning_message
+import time</code></pre>
+      
+      <strong>SECTION B: Test agents list (config area mein)</strong>
+      <pre><code># Phase 1: Self-test only
+TEST_AGENTS_PHASE_1 = [
+    {
+        "name": "Prashant Chandratre",
+        "phone": "917709446589",
+        "language": "marathi",
+        "city": "Pune"
+    },
+]
+
+# Phase 2: 5 active agents (jab ready ho)
+TEST_AGENTS_PHASE_2 = [
+    {"name": "Prashant Chandratre", "phone": "917709446589", 
+     "language": "marathi", "city": "Pune"},
+    # Aur 5 agents add karenge jab ready ho
+]</code></pre>
+      
+      <strong>SECTION C: New endpoint (if __name__ == "__main__" ke pehle)</strong>
+      <pre><code>@app.route("/api/send-morning-messages", methods=["GET", "POST"])
+def send_morning_messages():
+    """Daily 8 AM cron trigger se yeh chalta hai"""
+    
+    # Security check
+    secret_key = request.headers.get("X-API-Key") or request.args.get("key")
+    expected_key = os.getenv("MORNING_API_KEY", "pbp-morning-2026")
+    
+    if secret_key != expected_key:
+        return jsonify({"status": "error", "message": "Invalid key"}), 401
+    
+    # Phase select
+    phase = request.args.get("phase", "1")
+    agents_list = TEST_AGENTS_PHASE_1 if phase == "1" else TEST_AGENTS_PHASE_2
+    
+    results = []
+    sent_count = 0
+    failed_count = 0
+    
+    for agent in agents_list:
+        try:
+            message = get_morning_message(
+                agent_name=agent['name'],
+                language=agent.get('language', 'marathi')
+            )
+            
+            # Existing function reuse
+            result = send_text_message(agent['phone'], message)
+            
+            results.append({
+                "phone": agent['phone'],
+                "name": agent['name'],
+                "status": "sent"
+            })
+            sent_count += 1
+            time.sleep(2)  # Rate limit
+            
+        except Exception as e:
+            results.append({
+                "phone": agent['phone'],
+                "name": agent['name'],
+                "status": "failed",
+                "error": str(e)
+            })
+            failed_count += 1
+    
+    return jsonify({
+        "phase": phase,
+        "total": len(agents_list),
+        "sent": sent_count,
+        "failed": failed_count,
+        "results": results
+    }), 200</code></pre>
+      
+      <ol start="5">
+        <li>Bottom mein <strong>"Commit changes"</strong> click karo</li>
+        <li>Branch: <strong>daily-engagement-test</strong> select hona chahiye</li>
+        <li>Commit message: <code>Add morning messages endpoint</code></li>
+        <li><strong>Commit changes</strong> click karo</li>
+      </ol>
+    </div>
+
+    <!-- STEP 3: TEST ON TEST BRANCH (RAILWAY) -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <h3>Test branch ko Railway pe deploy karo</h3>
+        <span class="time-tag">⏱ 10 MIN</span>
+      </div>
+      
+      <p style="font-size: 14px; margin-bottom: 8px;"><strong>Option A: Existing Railway service mein test branch deploy</strong></p>
+      
+      <ol>
+        <li>Railway dashboard kholo</li>
+        <li>Apna project <strong>"Agent-Ai-coach"</strong> kholo</li>
+        <li>Service → <strong>"Settings"</strong> tab</li>
+        <li>Scroll down to <strong>"Source"</strong> section</li>
+        <li>Branch dropdown se <strong>main</strong> ko temporarily <strong>daily-engagement-test</strong> mein change karo</li>
+        <li>"Save" click karo</li>
+        <li>Railway auto-deploy karega test branch ka code (2-3 min)</li>
+      </ol>
+      
+      <div class="callout warning">
+        <strong>⚠️ TEMPORARY:</strong> Yeh test ke liye hai. Test successful hone ke baad wapas <strong>main</strong> branch select karenge.
+      </div>
+      
+      <p style="font-size: 14px; margin-top: 14px;"><strong>Better Option B: Naya Railway service banao (Recommended)</strong></p>
+      
+      <ol>
+        <li>Railway dashboard → <strong>"+ New"</strong> → <strong>"Deploy from GitHub repo"</strong></li>
+        <li>Same repo select karo: <code>Agent-Ai-coach</code></li>
+        <li>Settings → Source → Branch: <strong>daily-engagement-test</strong></li>
+        <li>Same environment variables copy karo (Variables tab)</li>
+        <li>Naya URL milega test ke liye</li>
+        <li>Production main branch undisturbed rahega ✅</li>
+      </ol>
+      
+      <div class="callout info">
+        <strong>💡 Recommended:</strong> Option B safer hai — production touch nahi hota.
+      </div>
+    </div>
+
+    <!-- STEP 4: TEST -->
+    <div class="step done">
+      <div class="step-header">
+        <div class="step-num">4</div>
+        <h3>Manual test karo — apne aap pe!</h3>
+        <span class="time-tag">⏱ 5 MIN</span>
+      </div>
+      
+      <p style="font-size: 14px;">Browser mein yeh URL hit karo:</p>
+      
+      <pre><code>https://YOUR-RAILWAY-URL.up.railway.app/api/send-morning-messages?key=pbp-morning-2026&phase=1</code></pre>
+      
+      <p style="font-size: 13px; margin-top: 10px;">Replace <code>YOUR-RAILWAY-URL</code> with actual Railway URL.</p>
+      
+      <p style="font-size: 14px; margin-top: 14px;"><strong>Expected response:</strong></p>
+      
+      <pre><code>{
+  "phase": "1",
+  "total": 1,
+  "sent": 1,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Prashant Chandratre",
+      "phone": "917709446589",
+      "status": "sent"
+    }
+  ]
+}</code></pre>
+      
+      <div class="callout success">
+        <strong>✅ Success Indicator:</strong>
+        <ol style="margin-top: 8px;">
+          <li>JSON response mein "sent": 1 dikhe</li>
+          <li>Aapke WhatsApp pe message aaye (Marathi morning message)</li>
+          <li>Railway logs mein success entry dikhe</li>
+        </ol>
+      </div>
+      
+      <div class="callout warning">
+        <strong>❌ Agar Fail Ho:</strong>
+        <ul style="margin-top: 8px;">
+          <li>Railway logs check karo (Deployments → Latest → View logs)</li>
+          <li>Common issue: <code>send_text_message</code> function ka exact name verify karo (aapke app.py mein)</li>
+          <li>Screenshot bhej do — main solve karunga</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CRON SETUP -->
+  <div class="section">
+    <h2>Phir <span class="accent">Cron Job</span> Setup Karo (Daily 8 AM)</h2>
+    
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">5</div>
+        <h3>Cron-job.org pe FREE schedule banao</h3>
+        <span class="time-tag">⏱ 10 MIN</span>
+      </div>
+      
+      <ol>
+        <li>Open: <code>cron-job.org</code></li>
+        <li>Sign up FREE (email se)</li>
+        <li>Login karke <strong>"Cronjobs"</strong> → <strong>"Create cronjob"</strong></li>
+        <li>Form fill karo:
+          <ul>
+            <li><strong>Title:</strong> Morning Messages Daily</li>
+            <li><strong>URL:</strong> <code>https://YOUR-RAILWAY-URL.up.railway.app/api/send-morning-messages?key=pbp-morning-2026&phase=1</code></li>
+            <li><strong>Schedule:</strong>
+              <ul>
+                <li>Every day</li>
+                <li>Time: <strong>8:00 AM</strong></li>
+                <li>Timezone: <strong>Asia/Kolkata (IST)</strong></li>
+              </ul>
+            </li>
+            <li><strong>Request method:</strong> GET</li>
+          </ul>
+        </li>
+        <li>"Create cronjob" click karo</li>
+        <li>✅ Done!</li>
+      </ol>
+      
+      <div class="callout success">
+        <strong>🎉 Kal Subah 8 AM se:</strong> Aapko apne WhatsApp pe automatic morning message aayega Prashant Sir ki branding ke saath!
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 2 PREP -->
+  <div class="section">
+    <h2>Phase 2: <span class="accent">5 Agents</span> Tak Scale Karo</h2>
+    
+    <p style="font-size: 14px; color: var(--ink-soft); margin-bottom: 14px;">
+      Aaj raat test successful ho jaaye toh kal Phase 2:
+    </p>
+    
+    <div class="step">
+      <h3>5 Active Agents Add Karne Ka Process:</h3>
+      
+      <ol>
+        <li>5 active agents identify karo (jo aksar message karte hain)</li>
+        <li>Inke phone numbers note karo</li>
+        <li>App.py mein <code>TEST_AGENTS_PHASE_2</code> list update karo</li>
+        <li>Format:
+          <pre><code>TEST_AGENTS_PHASE_2 = [
+    {"name": "Prashant", "phone": "917709446589", 
+     "language": "marathi", "city": "Pune"},
+    {"name": "Agent2", "phone": "91XXXXXXXXXX", 
+     "language": "marathi", "city": "Nashik"},
+    # ... aur 3 agents
+]</code></pre>
+        </li>
+        <li>Commit to test branch</li>
+        <li>Cron job URL mein <code>?phase=2</code> kar do</li>
+        <li>5 agents ko test message jaayega</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- DOWNLOAD FILES -->
+  <div class="section" style="background: linear-gradient(135deg, var(--pb-blue-dark), var(--pb-blue)); color: white;">
+    <h2 style="color: white;">📥 <span style="color: var(--pb-gold); font-style: italic;">Files</span> Aapke Liye</h2>
+    
+    <p style="opacity: 0.9; margin-top: 8px;">2 files attached hain — copy karke GitHub pe paste karo:</p>
+    
+    <ol style="font-size: 14px; line-height: 2; margin-top: 14px; margin-left: 22px;">
+      <li><strong style="color: var(--pb-gold);">daily_engagement.py</strong> — Naya file (full content)</li>
+      <li><strong style="color: var(--pb-gold);">ADD_TO_APP_PY.py</strong> — Code snippet to add in app.py</li>
+    </ol>
+    
+    <div style="background: rgba(255,215,0,0.15); padding: 14px 18px; border-radius: 10px; border-left: 4px solid var(--pb-gold); margin-top: 16px; font-size: 13px;">
+      <strong style="color: var(--pb-gold);">⚡ Ready to deploy ho jaaye to:</strong>
+      <ol style="margin-top: 8px;">
+        <li>daily_engagement.py — naye file ke roop mein add</li>
+        <li>app.py — 3 sections (imports, list, endpoint) add</li>
+        <li>Railway deploy</li>
+        <li>Manual test trigger</li>
+        <li>Cron-job.org pe schedule</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="section" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 2px solid var(--pb-green);">
+    <h2 style="color: #047857;">⏰ Aaj Raat Ka Timeline</h2>
+    
+    <ol style="font-size: 14px; line-height: 2; margin-top: 14px; margin-left: 22px;">
+      <li><strong>10:00 PM:</strong> daily_engagement.py file add karo GitHub pe (5 min)</li>
+      <li><strong>10:05 PM:</strong> app.py mein 3 sections add karo (10 min)</li>
+      <li><strong>10:15 PM:</strong> Railway pe test branch deploy (5 min)</li>
+      <li><strong>10:20 PM:</strong> Manual trigger karo — apne WhatsApp pe message aayega ✅</li>
+      <li><strong>10:25 PM:</strong> Cron-job.org pe 8 AM schedule (5 min)</li>
+      <li><strong>Kal 8:00 AM:</strong> Pehla automated message aayega! 🎉</li>
+    </ol>
+    
+    <div style="background: white; padding: 14px 18px; border-radius: 10px; margin-top: 16px; font-size: 13px;">
+      <strong style="color: var(--pb-blue-dark);">📞 Stuck? Screenshot bhej do — exact next step bata dunga!</strong>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
