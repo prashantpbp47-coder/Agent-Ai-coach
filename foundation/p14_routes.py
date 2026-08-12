@@ -2,19 +2,12 @@
 from datetime import date, datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from .db import db
 from .models import Agent, BusinessEvent, User
-from .models_p14 import (
-    AgentNBARecommendation,
-    AgentTargetEvent,
-    AgentTargetPlan,
-    ClubTargetRule,
-    UserAgentLink,
-    UserRMLink,
-)
-from .security import current_user, require_role
+from .models_p14 import AgentNBARecommendation, AgentTargetEvent, AgentTargetPlan, ClubTargetRule, UserAgentLink, UserRMLink
+from .security import current_user, require_auth, require_role
 
 bp = Blueprint("p14_adaptive_targets", __name__, url_prefix="/api/p14")
 
@@ -30,15 +23,11 @@ def _round_1000(value: float) -> int:
 
 def _agent_stats(agent_id: str, target_date: date):
     start = target_date - timedelta(days=30)
-    rows = db.session.execute(
-        select(BusinessEvent.business_date, BusinessEvent.premium)
-        .where(BusinessEvent.agent_id == agent_id, BusinessEvent.business_date >= start, BusinessEvent.business_date <= target_date)
-    ).all()
+    rows = db.session.execute(select(BusinessEvent.business_date, BusinessEvent.premium).where(BusinessEvent.agent_id == agent_id, BusinessEvent.business_date >= start, BusinessEvent.business_date <= target_date)).all()
     total = sum(int(r.premium or 0) for r in rows)
     days = {r.business_date for r in rows if (r.premium or 0) > 0}
-    last_business = max((r.business_date for r in rows if (r.premium or 0) > 0), default=None)
     avg_active_day = (total / len(days)) if days else 0
-    return {"total_30d": total, "active_days": len(days), "last_business": last_business, "avg_active_day": avg_active_day}
+    return {"total_30d": total, "active_days": len(days), "avg_active_day": avg_active_day}
 
 
 def _build_target(agent: Agent, target_date: date, club_name: str | None):
@@ -46,24 +35,17 @@ def _build_target(agent: Agent, target_date: date, club_name: str | None):
     club = None
     if club_name:
         club = db.session.execute(select(ClubTargetRule).filter_by(club_name=club_name, is_active=True)).scalar_one_or_none()
-
     if club:
         amount = min(max(club.target_amount, club.minimum_amount), club.maximum_amount)
-        tier = "club_member"
-        basis = "club_rule"
+        tier = "club_member"; basis = "club_rule"
     elif agent.status != "active" or stats["total_30d"] == 0:
-        amount = MIN_TARGET
-        tier = "reactivation"
-        basis = "inactive_or_no_recent_business"
+        amount = MIN_TARGET; tier = "reactivation"; basis = "inactive_or_no_recent_business"
     elif stats["total_30d"] >= SMART_TARGET or stats["avg_active_day"] >= SMART_TARGET:
         amount = min(max(_round_1000(stats["avg_active_day"] * 1.05), SMART_TARGET), MAX_TARGET)
-        tier = "smart_agent"
-        basis = "successful_back_record"
+        tier = "smart_agent"; basis = "successful_back_record"
     else:
         amount = min(max(_round_1000(stats["avg_active_day"] * 1.10), MIN_TARGET), MAX_TARGET)
-        tier = "adaptive"
-        basis = "30_day_back_record"
-
+        tier = "adaptive"; basis = "30_day_back_record"
     return amount, tier, basis, stats
 
 
@@ -109,12 +91,11 @@ def link_rm_user():
         return jsonify({"error": "user_id_and_rm_id_required"}), 400
     if not db.session.get(User, user_id):
         return jsonify({"error": "user_not_found"}), 404
-    link = UserRMLink(user_id=user_id, rm_id=rm_id)
     existing = db.session.execute(select(UserRMLink).filter_by(user_id=user_id)).scalar_one_or_none()
     if existing:
         existing.rm_id = rm_id
     else:
-        db.session.add(link)
+        db.session.add(UserRMLink(user_id=user_id, rm_id=rm_id))
     db.session.commit()
     return jsonify({"status": "linked", "user_id": user_id, "rm_id": rm_id})
 
@@ -129,12 +110,12 @@ def club_rule_upsert():
         return jsonify({"error": "club_name_and_positive_target_required"}), 400
     rule = db.session.execute(select(ClubTargetRule).filter_by(club_name=name)).scalar_one_or_none()
     if not rule:
-        rule = ClubTargetRule(club_name=name, target_amount=amount)
+        rule = ClubTargetRule(club_name=name, target_amount=amount, minimum_amount=MIN_TARGET, maximum_amount=MAX_TARGET)
         db.session.add(rule)
     else:
         rule.target_amount = amount
-    rule.minimum_amount = max(MIN_TARGET, int(data.get("minimum_amount", rule.minimum_amount if rule.id else MIN_TARGET)))
-    rule.maximum_amount = min(MAX_TARGET, int(data.get("maximum_amount", MAX_TARGET)))
+    rule.minimum_amount = min(max(int(data.get("minimum_amount", rule.minimum_amount)), MIN_TARGET), MAX_TARGET)
+    rule.maximum_amount = min(max(int(data.get("maximum_amount", rule.maximum_amount)), rule.minimum_amount), MAX_TARGET)
     db.session.commit()
     return jsonify({"club_name": rule.club_name, "target_amount": rule.target_amount, "minimum_amount": rule.minimum_amount, "maximum_amount": rule.maximum_amount})
 
@@ -151,11 +132,10 @@ def generate_targets():
         if not rm_id:
             return jsonify({"error": "agent_ids_or_rm_id_required"}), 400
         agent_ids = [a.id for a in db.session.execute(select(Agent).where(Agent.rm_id == rm_id)).scalars().all()]
-
     generated = []
     for agent_id in agent_ids:
         agent = db.session.get(Agent, agent_id)
-        if not agent:
+        if not agent or not agent.rm_id:
             continue
         amount, tier, basis, stats = _build_target(agent, target_date, club_name)
         plan = db.session.execute(select(AgentTargetPlan).filter_by(agent_id=agent_id, target_date=target_date)).scalar_one_or_none()
@@ -163,17 +143,16 @@ def generate_targets():
             plan = AgentTargetPlan(rm_id=agent.rm_id, agent_id=agent.id, target_date=target_date, target_amount=amount, basis=basis, back_record_premium=int(stats["total_30d"]), tier=tier, club_name=club_name)
             db.session.add(plan)
         else:
-            plan.target_amount = amount; plan.basis = basis; plan.back_record_premium = int(stats["total_30d"]); plan.tier = tier; plan.club_name = club_name
+            plan.rm_id = agent.rm_id; plan.target_amount = amount; plan.basis = basis; plan.back_record_premium = int(stats["total_30d"]); plan.tier = tier; plan.club_name = club_name
         generated.append({"agent_id": agent.id, "name": agent.name, "target": amount, "tier": tier, "back_record_30d": int(stats["total_30d"]), "active_days_30d": stats["active_days"]})
     db.session.commit()
     return jsonify({"target_date": target_date.isoformat(), "agent_visible_target_only": True, "items": generated})
 
 
 @bp.get("/agent/me/target")
+@require_auth
 def agent_my_target():
     user = current_user()
-    if not user:
-        return jsonify({"error": "authentication_required"}), 401
     link = db.session.execute(select(UserAgentLink).filter_by(user_id=user.id)).scalar_one_or_none()
     if not link:
         return jsonify({"error": "agent_profile_not_linked"}), 403
@@ -187,32 +166,20 @@ def agent_my_target():
 @bp.get("/rm/dashboard")
 @require_role("RM", "ADMIN")
 def rm_dashboard():
-    user = current_user()
-    linked_rm = db.session.execute(select(UserRMLink).filter_by(user_id=user.id)).scalar_one_or_none()
-    rm_id = request.args.get("rm_id") or (linked_rm.rm_id if linked_rm else None)
+    user = current_user(); linked_rm = db.session.execute(select(UserRMLink).filter_by(user_id=user.id)).scalar_one_or_none(); rm_id = request.args.get("rm_id") or (linked_rm.rm_id if linked_rm else None)
     if not rm_id:
         return jsonify({"error": "rm_profile_not_linked"}), 403
     target_date = date.fromisoformat(request.args["date"]) if request.args.get("date") else datetime.now(timezone.utc).date()
     plans = db.session.execute(select(AgentTargetPlan).where(AgentTargetPlan.rm_id == rm_id, AgentTargetPlan.target_date == target_date)).scalars().all()
     total_individual_targets = sum(p.target_amount for p in plans)
     total_completion = sum(p.completion_amount for p in plans)
-    return jsonify({
-        "rm_id": rm_id,
-        "date": target_date.isoformat(),
-        "internal_rm_total_target": RM_TOTAL_TARGET,
-        "individual_target_total": total_individual_targets,
-        "completed_total": total_completion,
-        "remaining_individual_target": max(total_individual_targets - total_completion, 0),
-        "items": [_serialize(p) for p in plans],
-    })
+    return jsonify({"rm_id": rm_id, "date": target_date.isoformat(), "internal_rm_total_target": RM_TOTAL_TARGET, "individual_target_total": total_individual_targets, "completed_total": total_completion, "remaining_individual_target": max(total_individual_targets - total_completion, 0), "items": [_serialize(p) for p in plans]})
 
 
 @bp.post("/targets/<target_id>/progress")
+@require_auth
 def target_progress(target_id):
-    user = current_user()
-    if not user:
-        return jsonify({"error": "authentication_required"}), 401
-    plan = db.session.get(AgentTargetPlan, target_id)
+    user = current_user(); plan = db.session.get(AgentTargetPlan, target_id)
     if not plan:
         return jsonify({"error": "target_not_found"}), 404
     is_admin = any(r.name == "ADMIN" for r in user.roles)
@@ -234,9 +201,7 @@ def target_progress(target_id):
 @bp.post("/nba/generate")
 @require_role("RM", "ADMIN")
 def generate_nba():
-    user = current_user()
-    linked_rm = db.session.execute(select(UserRMLink).filter_by(user_id=user.id)).scalar_one_or_none()
-    rm_id = request.args.get("rm_id") or (linked_rm.rm_id if linked_rm else None)
+    user = current_user(); linked_rm = db.session.execute(select(UserRMLink).filter_by(user_id=user.id)).scalar_one_or_none(); rm_id = request.args.get("rm_id") or (linked_rm.rm_id if linked_rm else None)
     if not rm_id:
         return jsonify({"error": "rm_profile_not_linked"}), 403
     today = datetime.now(timezone.utc).date()
@@ -244,13 +209,13 @@ def generate_nba():
     recs = []
     for plan in plans:
         agent = db.session.get(Agent, plan.agent_id)
+        if not agent:
+            continue
         gap = max(plan.target_amount - plan.completion_amount, 0)
         if plan.tier == "reactivation":
             action = "reactivate_agent"; priority = 95; reason = "Agent is inactive or has no recent business."; message = f"{agent.name} ji, आज ₹{plan.target_amount:,} का छोटा target रखकर फिर से business start करें. कोई case हो तो भेजिए."
-        elif gap == 0:
-            action = "celebrate_and_cross_sell"; priority = 30; reason = "Individual target completed."; message = f"Great work {agent.name} ji! आज का target complete हुआ. अब अगले customer opportunity पर काम करें."
         elif gap >= max(5000, int(plan.target_amount * 0.5)):
-            action = "priority_followup"; priority = 90; reason = "Large target gap remains."; message = f"{agent.name} ji, आपका आज का target ₹{plan.target_amount:,} है और अभी ₹{gap:,} बाकी है. Pending case या renewal share करें."
+            action = "priority_followup"; priority = 90; reason = "Large individual target gap remains."; message = f"{agent.name} ji, आपका आज का target ₹{plan.target_amount:,} है और अभी ₹{gap:,} बाकी है. Pending case या renewal share करें."
         else:
             action = "completion_push"; priority = 70; reason = "Target is partially complete; a focused final push is recommended."; message = f"{agent.name} ji, target completion के लिए ₹{gap:,} बाकी है. कोई ready customer case है तो भेजिए."
         rec = AgentNBARecommendation(rm_id=rm_id, agent_id=plan.agent_id, target_plan_id=plan.id, recommendation_date=today, priority=priority, action_type=action, reason=reason, suggested_message=message, follow_up_due_at=datetime.now(timezone.utc) + timedelta(hours=2))
