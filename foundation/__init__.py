@@ -3,6 +3,7 @@
 from .bootstrap import register_foundation
 from .domain_routes import bp as domain_bp
 from .p2_quote_bridge import bp as quote_bridge_bp
+from .p3_provider_routes import bp as provider_bp
 
 
 def register_p1_domains(app):
@@ -15,4 +16,9 @@ def register_p2_quote_bridge(app):
     return app
 
 
-__all__ = ["register_foundation", "register_p1_domains", "register_p2_quote_bridge"]
+def register_p3_providers(app):
+    app.register_blueprint(provider_bp)
+    return app
+
+
+__all__ = ["register_foundation", "register_p1_domains", "register_p2_quote_bridge", "register_p3_providers"]
