@@ -14,8 +14,7 @@ def today(): return date.today()
 def roles(): return {r.name for r in getattr(current_user(), "roles", [])}
 def admin(): return "ADMIN" in roles()
 def rm_for_user():
-    u=current_user()
-    return db.session.execute(select(RM).filter(func.lower(RM.email)==func.lower(u.email))).scalar_one_or_none() if u else None
+    u=current_user(); return db.session.execute(select(RM).filter(func.lower(RM.email)==func.lower(u.email))).scalar_one_or_none() if u else None
 def rm_scope():
     data=request.get_json(silent=True) or {}; explicit=request.args.get("rm_id") or data.get("rm_id"); rm=rm_for_user()
     if explicit and rm and explicit!=rm.id and not admin(): return None
@@ -53,7 +52,6 @@ def contact():
     if not rm_id or not aid: return jsonify({"error":"rm_id_and_agent_id_required"}),400
     a=db.session.get(Agent,aid)
     if not a or a.rm_id!=rm_id: return jsonify({"error":"agent_not_in_rm_scope"}),404
-    # Prevent duplicate same-day contacts unless the previous one explicitly requires follow-up.
     existing=db.session.execute(select(AgentContact).where(AgentContact.rm_id==rm_id,AgentContact.agent_id==aid,AgentContact.contact_date==today(),AgentContact.follow_up_required.is_(False))).first()
     if existing: return jsonify({"error":"already_contacted_today","agent_id":aid,"message":"Agent is excluded from today's call queue unless follow-up is required."}),409
     c=AgentContact(rm_id=rm_id,agent_id=aid,contact_date=today(),channel=data.get("channel","call"),outcome=data.get("outcome","contacted"),remarks=data.get("remarks"),follow_up_required=bool(data.get("follow_up_required",False)),follow_up_due_at=dt(data.get("follow_up_due_at")),call_reference=data.get("call_reference")); db.session.add(c)
@@ -97,15 +95,41 @@ def business():
     if not act: act=AgentDailyActivity(agent_id=aid,rm_id=rm_id,activity_date=today()); db.session.add(act)
     act.actual_premium=(act.actual_premium or 0)+e.premium; act.actual_policies=(act.actual_policies or 0)+e.policies; act.active_today=True; audit("rm.business_event","business_event",e.id); db.session.commit(); return jsonify({"saved":True,"business_event_id":e.id})
 
+@bp.post("/dispatch")
+@require_role("RM","MASTER_AGENT","ADMIN")
+def dispatch():
+    """Dispatch one RM-priority contact using the existing Twilio/Interakt adapters."""
+    data=request.get_json(silent=True) or {}; rm_id=rm_scope(); aid=data.get("agent_id"); channel=data.get("channel","whatsapp")
+    if not rm_id or not aid: return jsonify({"error":"rm_id_and_agent_id_required"}),400
+    agent=db.session.get(Agent,aid)
+    if not agent or agent.rm_id!=rm_id: return jsonify({"error":"agent_not_in_rm_scope"}),404
+    blocked=db.session.execute(select(AgentContact).where(AgentContact.rm_id==rm_id,AgentContact.agent_id==aid,AgentContact.contact_date==today(),AgentContact.follow_up_required.is_(False))).first()
+    if blocked: return jsonify({"error":"already_contacted_today"}),409
+    try:
+        if channel=="call":
+            from app import is_calling_hours, make_call, get_host, first_name
+            if not is_calling_hours(): return jsonify({"error":"calling_hours_9am_to_8pm"}),403
+            sid=make_call(agent.phone,f"https://{get_host()}/outbound-handler?aid={agent.partner_code}&name={first_name(agent.name)}")
+            if not sid: return jsonify({"error":"call_dispatch_failed"}),502
+            reference=sid.sid; outcome="call_dispatched"
+        else:
+            from app import send_whatsapp
+            msg=data.get("message") or f"Namaste {agent.name} ji! Aaj ka business projection share karein. Customer case ho to details bhejiye. - Prashant Sir"
+            if not send_whatsapp(agent.phone,msg): return jsonify({"error":"message_dispatch_failed"}),502
+            reference=None; outcome="message_dispatched"
+        contact_row=AgentContact(rm_id=rm_id,agent_id=aid,contact_date=today(),channel=channel,outcome=outcome,remarks=data.get("remarks"),call_reference=reference,follow_up_required=False); db.session.add(contact_row); db.session.commit()
+        return jsonify({"sent":True,"channel":channel,"agent_id":aid,"contact_id":contact_row.id,"reference":reference}),201
+    except Exception as exc:
+        db.session.rollback(); return jsonify({"error":"dispatch_error","detail":str(exc)}),502
+
 @bp.get("/dashboard")
 @require_role("RM","MASTER_AGENT","ADMIN")
 def dashboard():
     rm_id=rm_scope()
     if not rm_id: return jsonify({"error":"rm_mapping_required"}),422
-    t=target_for(rm_id); agents=db.session.execute(select(Agent).where(Agent.rm_id==rm_id,Agent.status=="active")).scalars().all(); acts=db.session.execute(select(AgentDailyActivity).filter_by(rm_id=rm_id,activity_date=today())).scalars().all(); by={x.agent_id:x for x in acts}; events=db.session.execute(select(BusinessEvent).where(BusinessEvent.rm_id==rm_id,BusinessEvent.business_date==today())).scalars().all()
-    active=sum(bool(x.active_today) for x in acts); total=sum(x.premium for x in events); policies=sum(x.policies for x in events); high=len({x.agent_id for x in events if x.premium>=t.high_value_threshold}); categories={}
+    t=target_for(rm_id); agents=db.session.execute(select(Agent).where(Agent.rm_id==rm_id,Agent.status=="active")).scalars().all(); acts=db.session.execute(select(AgentDailyActivity).filter_by(rm_id=rm_id,activity_date=today())).scalars().all(); by={x.agent_id:x for x in acts}; events=db.session.execute(select(BusinessEvent).where(BusinessEvent.rm_id==rm_id,BusinessEvent.business_date==today())).scalars().all(); active=sum(bool(x.active_today) for x in acts); total=sum(x.premium for x in events); policies=sum(x.policies for x in events); high=len({x.agent_id for x in events if x.premium>=t.high_value_threshold}); categories={}
     for e in events: categories[e.category]=categories.get(e.category,0)+e.premium
-    return jsonify({"date":str(today()),"rm_id":rm_id,"targets":{"calls":t.call_target,"active_agents":t.active_agent_target,"high_value_agents":t.high_value_agent_target,"high_value_threshold":t.high_value_threshold},"progress":{"active_agents":active,"active_gap":max(t.active_agent_target-active,0),"daily_business":total,"daily_policies":policies,"high_value_agents":high,"high_value_gap":max(t.high_value_agent_target-high,0),"category_business":categories},"agents":[{"agent_id":a.id,"partner_code":a.partner_code,"name":a.name,"master_agent_id":(db.session.execute(select(AgentHierarchy.master_agent_id).filter_by(agent_id=a.id,status="active")).scalar_one_or_none()),"active_today":bool(by[a.id].active_today) if a.id in by else False,"projected_premium":by[a.id].projected_premium if a.id in by else 0,"actual_premium":by[a.id].actual_premium if a.id in by else 0,"actual_policies":by[a.id].actual_policies if a.id in by else 0,"remarks":by[a.id].projection_remarks if a.id in by else None} for a in agents]})
+    return jsonify({"date":str(today()),"rm_id":rm_id,"targets":{"calls":t.call_target,"active_agents":t.active_agent_target,"high_value_agents":t.high_value_agent_target,"high_value_threshold":t.high_value_threshold},"progress":{"active_agents":active,"active_gap":max(t.active_agent_target-active,0),"daily_business":total,"daily_policies":policies,"high_value_agents":high,"high_value_gap":max(t.high_value_agent_target-high,0),"category_business":categories},"agents":[{"agent_id":a.id,"partner_code":a.partner_code,"name":a.name,"master_agent_id":db.session.execute(select(AgentHierarchy.master_agent_id).filter_by(agent_id=a.id,status="active")).scalar_one_or_none(),"active_today":bool(by[a.id].active_today) if a.id in by else False,"projected_premium":by[a.id].projected_premium if a.id in by else 0,"actual_premium":by[a.id].actual_premium if a.id in by else 0,"actual_policies":by[a.id].actual_policies if a.id in by else 0,"remarks":by[a.id].projection_remarks if a.id in by else None} for a in agents]})
 
 @bp.post("/reconciliation")
 @require_role("RM","MASTER_AGENT","ADMIN")
