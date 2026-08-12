@@ -8,6 +8,7 @@ from .rm_routes import bp as rm_bp
 from .p5_routes import bp as p5_bp
 from .p6_routes import bp as p6_bp
 from .p7_routes import bp as p7_bp
+from .p8_routes import bp as p8_bp
 
 
 def register_p1_domains(app):
@@ -45,6 +46,11 @@ def register_p7_rm_target_marketing(app):
     return app
 
 
+def register_p8_messaging(app):
+    app.register_blueprint(p8_bp)
+    return app
+
+
 __all__ = [
     "register_foundation",
     "register_p1_domains",
@@ -54,4 +60,5 @@ __all__ = [
     "register_p5_rm_planner",
     "register_p6_agent_inbox",
     "register_p7_rm_target_marketing",
+    "register_p8_messaging",
 ]
