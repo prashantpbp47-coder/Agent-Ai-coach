@@ -11,9 +11,10 @@ from foundation import (
     register_p6_agent_inbox,
     register_p7_rm_target_marketing,
     register_p8_messaging,
+    register_p9_document_intelligence,
 )
 
-# Preserve legacy routes and add the authenticated P0-P8 platform APIs.
+# Preserve legacy routes and add the authenticated P0-P9 platform APIs.
 app = register_foundation(legacy_app)
 app = register_p1_domains(app)
 app = register_p2_quote_bridge(app)
@@ -23,6 +24,7 @@ app = register_p5_rm_planner(app)
 app = register_p6_agent_inbox(app)
 app = register_p7_rm_target_marketing(app)
 app = register_p8_messaging(app)
+app = register_p9_document_intelligence(app)
 
 
 @app.get('/r/<slug>')
