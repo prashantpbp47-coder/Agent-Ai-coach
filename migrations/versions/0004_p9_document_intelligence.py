@@ -2,10 +2,10 @@
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0004_p9_document_intelligence"
-down_revision = "0003_p6_agent_inbox"
+revision = "0005_p9_document_intelligence"
+down_revision = "0004_p8_messaging_delivery"
 branch_labels = None
- depends_on = None
+depends_on = None
 
 
 def upgrade():
