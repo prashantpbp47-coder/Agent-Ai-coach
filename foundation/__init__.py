@@ -12,6 +12,7 @@ from .p8_routes import bp as p8_bp
 from .p9_routes import bp as p9_bp
 from .p10_routes import bp as p10_bp
 from .p11_routes import bp as p11_bp
+from .p12_routes import bp as p12_bp
 
 
 def register_p1_domains(app): app.register_blueprint(domain_bp); return app
@@ -25,5 +26,6 @@ def register_p8_messaging(app): app.register_blueprint(p8_bp); return app
 def register_p9_document_intelligence(app): app.register_blueprint(p9_bp); return app
 def register_p10_followup_renewal(app): app.register_blueprint(p10_bp); return app
 def register_p11_automation_bi(app): app.register_blueprint(p11_bp); return app
+def register_p12_clay_prospect_intelligence(app): app.register_blueprint(p12_bp); return app
 
-__all__ = ["register_foundation","register_p1_domains","register_p2_quote_bridge","register_p3_providers","register_p4_rm_command_center","register_p5_rm_planner","register_p6_agent_inbox","register_p7_rm_target_marketing","register_p8_messaging","register_p9_document_intelligence","register_p10_followup_renewal","register_p11_automation_bi"]
+__all__ = ["register_foundation","register_p1_domains","register_p2_quote_bridge","register_p3_providers","register_p4_rm_command_center","register_p5_rm_planner","register_p6_agent_inbox","register_p7_rm_target_marketing","register_p8_messaging","register_p9_document_intelligence","register_p10_followup_renewal","register_p11_automation_bi","register_p12_clay_prospect_intelligence"]
