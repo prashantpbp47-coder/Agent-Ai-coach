@@ -6,6 +6,7 @@ from .p2_quote_bridge import bp as quote_bridge_bp
 from .p3_provider_routes import bp as provider_bp
 from .rm_routes import bp as rm_bp
 from .p5_routes import bp as p5_bp
+from .p6_routes import bp as p6_bp
 
 
 def register_p1_domains(app):
@@ -33,6 +34,11 @@ def register_p5_rm_planner(app):
     return app
 
 
+def register_p6_agent_inbox(app):
+    app.register_blueprint(p6_bp)
+    return app
+
+
 __all__ = [
     "register_foundation",
     "register_p1_domains",
@@ -40,4 +46,5 @@ __all__ = [
     "register_p3_providers",
     "register_p4_rm_command_center",
     "register_p5_rm_planner",
+    "register_p6_agent_inbox",
 ]
