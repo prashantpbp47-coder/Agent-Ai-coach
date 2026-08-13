@@ -17,9 +17,10 @@ from foundation import (
     register_p12_clay_prospect_intelligence,
     register_p13_bi_reconciliation,
     register_p14_adaptive_targets,
+    register_p15_priya_ai,
 )
 
-# Preserve legacy routes and add the authenticated P0-P14 platform APIs.
+# Preserve legacy routes and add the authenticated P0-P15 platform APIs.
 app = register_foundation(legacy_app)
 app = register_p1_domains(app)
 app = register_p2_quote_bridge(app)
@@ -35,6 +36,7 @@ app = register_p11_automation_bi(app)
 app = register_p12_clay_prospect_intelligence(app)
 app = register_p13_bi_reconciliation(app)
 app = register_p14_adaptive_targets(app)
+app = register_p15_priya_ai(app)
 
 
 @app.get('/r/<slug>')
