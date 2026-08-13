@@ -1,0 +1,3 @@
+# P14 — Adaptive Agent Targets + AI Follow-up
+
+RM's ₹5 lakh target is internal and never shown to agents. Agents receive individualized targets based on back-records and club/tier rules. Inactive/re-activation agents begin at ₹1,000; Smart Agent benchmark is ₹19,000; configured club targets may override within ₹1,000–₹2,00,000. Agent-facing APIs expose only their own target/progress. P14 generates auditable next-best-action suggestions and follow-up messages; P8 remains the delivery layer.
