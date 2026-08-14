@@ -1,0 +1,81 @@
+name: P17 Runtime Smoke
+
+on:
+  push:
+    branches:
+      - agent/p17-priya-message-automation
+  pull_request:
+    branches:
+      - agent/p17-priya-message-automation
+  workflow_dispatch:
+
+jobs:
+  p17-smoke:
+    runs-on: ubuntu-latest
+    env:
+      FLASK_ENV: testing
+      SECRET_KEY: smoke-test-only
+      AI_PROVIDER: openai
+      AI_FALLBACK_PROVIDER: deepseek
+      OPENAI_API_KEY: ""
+      DEEPSEEK_API_KEY: ""
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Import and route registration smoke test
+        run: |
+          python - <<'PY'
+          import p0_runtime
+
+          app = p0_runtime.app
+          rules = {rule.rule for rule in app.url_map.iter_rules()}
+          assert any(rule.startswith("/api/p17/") for rule in rules), sorted(rules)
+          assert "/api/p17/dispatch" in rules, sorted(rules)
+          assert "/api/p17/agent-coach/queue" in rules, sorted(rules)
+
+          from foundation.p16_routes import _provider_chain, _provider_config
+          from foundation.p17_routes import _extract_message
+
+          assert _provider_chain("openai", "deepseek") == ["openai", "deepseek"]
+          assert _provider_chain("deepseek", "deepseek") == ["deepseek"]
+          assert _extract_message('{"message":"smoke"}') == "smoke"
+          assert _extract_message("plain smoke") == "plain smoke"
+
+          try:
+              _provider_config("unsupported")
+          except ValueError as exc:
+              assert str(exc) == "unsupported_provider"
+          else:
+              raise AssertionError("unsupported provider was not rejected")
+
+          print("P17 import, blueprint, provider-chain and message parsing checks: PASS")
+          PY
+
+      - name: Start Gunicorn
+        run: |
+          nohup gunicorn --bind 127.0.0.1:8080 --workers 1 --timeout 30 p0_runtime:app > /tmp/gunicorn.log 2>&1 &
+          echo $! > /tmp/gunicorn.pid
+          for i in $(seq 1 30); do
+            if curl --silent --output /dev/null --write-out "%{http_code}" http://127.0.0.1:8080/api/p17/dispatch | grep -q '^401$'; then
+              echo "P17 runtime route is live and protected: PASS"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/gunicorn.log
+          echo "P17 runtime route did not return expected unauthenticated 401"
+          exit 1
+
+      - name: Stop Gunicorn
+        if: always()
+        run: |
+          if [ -f /tmp/gunicorn.pid ]; then kill $(cat /tmp/gunicorn.pid) || true; fi
