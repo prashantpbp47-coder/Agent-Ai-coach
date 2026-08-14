@@ -1,4 +1,4 @@
-: # v2 - force redeploy
+# v2 - force redeploy
 """
 PRIYA AI v4.0 - Prashant Chandratre ji ki AI Sales Assistant
 Clean deploy-ready code for Render
