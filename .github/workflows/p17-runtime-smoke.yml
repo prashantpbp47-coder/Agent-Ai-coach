@@ -79,3 +79,5 @@ jobs:
         if: always()
         run: |
           if [ -f /tmp/gunicorn.pid ]; then kill $(cat /tmp/gunicorn.pid) || true; fi
+
+      # Re-run validation after the legacy app.py syntax fix.
