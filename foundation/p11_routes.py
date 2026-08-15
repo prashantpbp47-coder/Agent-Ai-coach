@@ -5,7 +5,8 @@ from datetime import datetime, timedelta, timezone, date
 from flask import Blueprint, jsonify, request
 from sqlalchemy import func, select
 from .db import db
-from .models import Agent, AuditLog, BusinessEvent, RM
+from .models import Agent, AuditLog, RM
+from .models_p4 import BusinessEvent
 from .models_p7 import RMDailyBusinessTarget, AgentDailyMessage
 from .models_p10 import RenewalWorkflow, RenewalReminder, FollowUpTask, FollowUpEvent
 from .models_p11 import AutomationRun, RMDailyBISnapshot
