@@ -4,7 +4,8 @@ import uuid
 from flask import Blueprint, jsonify, request
 from sqlalchemy import func, select
 from .db import db
-from .models import Agent, AuditLog, BusinessEvent, RM
+from .models import Agent, AuditLog, RM
+from .models_p4 import BusinessEvent
 from .models_p7 import RMDailyBusinessTarget, RMMarketingPlan, AgentDailyMessage
 from .security import current_user, require_role
 
