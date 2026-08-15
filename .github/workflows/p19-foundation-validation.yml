@@ -3,6 +3,7 @@ name: P19 Foundation Validation
 on:
   push:
     branches:
+      - agent/p19-fix-p11-import
       - agent/p19-knowledge-base
   pull_request:
     branches:
@@ -36,10 +37,19 @@ jobs:
           import p0_runtime
           app = p0_runtime.app
           rules = {r.rule for r in app.url_map.iter_rules()}
-          assert "/api/p19/health" in rules
-          assert "/api/p19/search" in rules
-          print("P19 import and route registration: PASS")
+          for route in ("/api/p17", "/api/p18", "/api/p19/health", "/api/p19/search"):
+              assert any(r == route or r.startswith(route + "/") for r in rules), route
+          print("P0-P19 import and route registration: PASS")
           PY
+      - name: Gunicorn startup validation
+        run: |
+          timeout 15s gunicorn --bind 127.0.0.1:8099 p0_runtime:app >/tmp/gunicorn.log 2>&1 &
+          pid=$!
+          sleep 5
+          kill -0 "$pid"
+          echo "Gunicorn startup: PASS"
+          kill "$pid" || true
+          cat /tmp/gunicorn.log
       - name: Migration graph validation
         run: |
           alembic heads
