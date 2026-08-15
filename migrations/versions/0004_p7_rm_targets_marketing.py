@@ -3,10 +3,9 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "0004_p7"
-down_revision = "0003_p6"
+down_revision = "0003_p6_agent_inbox"
 branch_labels = None
 depends_on = None
-
 
 def upgrade():
     op.create_table("rm_daily_business_targets",
@@ -46,7 +45,6 @@ def upgrade():
         sa.Column("dedupe_key", sa.String(150), nullable=False, unique=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False))
     op.create_index("ix_agent_daily_message_agent_date", "agent_daily_messages", ["agent_id", "message_date"])
-
 
 def downgrade():
     op.drop_table("agent_daily_messages")
