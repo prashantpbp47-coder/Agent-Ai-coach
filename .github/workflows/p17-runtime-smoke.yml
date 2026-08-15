@@ -15,10 +15,12 @@ jobs:
     env:
       FLASK_ENV: testing
       SECRET_KEY: smoke-test-only
+      JWT_SECRET_KEY: smoke-test-jwt-secret-012345678901234567890123
       AI_PROVIDER: openai
       AI_FALLBACK_PROVIDER: deepseek
       OPENAI_API_KEY: ""
       DEEPSEEK_API_KEY: ""
+      DATABASE_URL: sqlite:///partnershub_p0.db
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,32 +33,56 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --upgrade pip && pip install -r requirements.txt
 
+      - name: Diagnostic Python import
+        run: |
+          python - <<'PY'
+          import traceback
+          import sys
+          print("Python:", sys.version)
+          try:
+              import app
+              print("legacy app import: PASS")
+          except Exception:
+              print("legacy app import: FAIL")
+              traceback.print_exc()
+              raise
+          try:
+              import foundation
+              print("foundation package import: PASS")
+          except Exception:
+              print("foundation package import: FAIL")
+              traceback.print_exc()
+              raise
+          try:
+              import p0_runtime
+              print("p0_runtime import: PASS")
+          except Exception:
+              print("p0_runtime import: FAIL")
+              traceback.print_exc()
+              raise
+          PY
+
       - name: Import and route registration smoke test
         run: |
           python - <<'PY'
           import p0_runtime
-
           app = p0_runtime.app
           rules = {rule.rule for rule in app.url_map.iter_rules()}
           assert any(rule.startswith("/api/p17/") for rule in rules), sorted(rules)
           assert "/api/p17/dispatch" in rules, sorted(rules)
           assert "/api/p17/agent-coach/queue" in rules, sorted(rules)
-
           from foundation.p16_routes import _provider_chain, _provider_config
           from foundation.p17_routes import _extract_message
-
           assert _provider_chain("openai", "deepseek") == ["openai", "deepseek"]
           assert _provider_chain("deepseek", "deepseek") == ["deepseek"]
           assert _extract_message('{"message":"smoke"}') == "smoke"
           assert _extract_message("plain smoke") == "plain smoke"
-
           try:
               _provider_config("unsupported")
           except ValueError as exc:
               assert str(exc) == "unsupported_provider"
           else:
               raise AssertionError("unsupported provider was not rejected")
-
           print("P17 import, blueprint, provider-chain and message parsing checks: PASS")
           PY
 
@@ -79,5 +105,3 @@ jobs:
         if: always()
         run: |
           if [ -f /tmp/gunicorn.pid ]; then kill $(cat /tmp/gunicorn.pid) || true; fi
-
-      # Re-run validation after the legacy app.py syntax fix.
