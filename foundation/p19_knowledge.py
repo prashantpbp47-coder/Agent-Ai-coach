@@ -1,15 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 
 from flask import Blueprint, jsonify, request
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Text
 
-# The shared SQLAlchemy instance is imported lazily so this module remains
-# compatible with the existing foundation runtime.
-from .extensions import db
+from .db import db
 
 
 p19_bp = Blueprint("p19_knowledge", __name__, url_prefix="/api/p19")
@@ -37,7 +32,7 @@ class KnowledgeEntry(db.Model):
     source_id = db.Column(db.Integer, db.ForeignKey("knowledge_sources.id"), nullable=False)
     title = db.Column(db.String(255), nullable=False)
     topic = db.Column(db.String(120), nullable=False)
-    content = db.Column(Text, nullable=False)
+    content = db.Column(db.Text, nullable=False)
     tags = db.Column(db.String(1000), nullable=True)
     approved = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
