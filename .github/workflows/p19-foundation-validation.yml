@@ -1,0 +1,64 @@
+name: P19 Foundation Validation
+
+on:
+  push:
+    branches:
+      - agent/p19-knowledge-base
+  pull_request:
+    branches:
+      - agent/p19-knowledge-base
+  workflow_dispatch:
+
+jobs:
+  foundation-validation:
+    runs-on: ubuntu-latest
+    env:
+      FLASK_ENV: testing
+      SECRET_KEY: smoke-test-only
+      JWT_SECRET_KEY: smoke-test-jwt-secret-012345678901234567890123
+      DATABASE_URL: sqlite:///partnershub_p19_foundation.db
+      OPENAI_API_KEY: ""
+      DEEPSEEK_API_KEY: ""
+      AI_PROVIDER: openai
+      AI_FALLBACK_PROVIDER: deepseek
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+      - name: Python import and route validation
+        run: |
+          python - <<'PY'
+          import p0_runtime
+          app = p0_runtime.app
+          rules = {r.rule for r in app.url_map.iter_rules()}
+          assert "/api/p19/health" in rules
+          assert "/api/p19/search" in rules
+          print("P19 import and route registration: PASS")
+          PY
+      - name: Migration graph validation
+        run: |
+          alembic heads
+          alembic history -n 30
+      - name: Fresh database migration
+        run: |
+          rm -f partnershub_p19_foundation.db
+          alembic upgrade head
+      - name: P19 database validation
+        run: |
+          python - <<'PY'
+          import sqlite3
+          conn = sqlite3.connect("partnershub_p19_foundation.db")
+          names = {row[0] for row in conn.execute("select name from sqlite_master where type='table'")}
+          required = {"knowledge_sources", "knowledge_entries", "alembic_version"}
+          missing = sorted(required - names)
+          assert not missing, missing
+          versions = [row[0] for row in conn.execute("select version_num from alembic_version")]
+          assert "0013_p19_knowledge_base" in versions, versions
+          print("Fresh migration and P19 schema: PASS")
+          conn.close()
+          PY
