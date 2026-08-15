@@ -1,15 +1,14 @@
 """P10 follow-up and renewal workflow tables.
 Revision ID: 0005_p10_followup_renewal
-Revises: 0004_p9_document_intelligence
+Revises: 0005_p9_document_intelligence
 """
 from alembic import op
 import sqlalchemy as sa
 
 revision = "0005_p10_followup_renewal"
-down_revision = "0004_p9_document_intelligence"
+down_revision = "0005_p9_document_intelligence"
 branch_labels = None
 depends_on = None
-
 
 def upgrade():
     op.create_table("renewal_workflows",
@@ -31,7 +30,6 @@ def upgrade():
     op.create_index("ix_renewal_workflows_agent_id", "renewal_workflows", ["agent_id"])
     op.create_index("ix_renewal_workflows_expiry_at", "renewal_workflows", ["expiry_at"])
     op.create_index("ix_renewal_workflows_next_action_at", "renewal_workflows", ["next_action_at"])
-
     op.create_table("renewal_reminders",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("renewal_id", sa.String(36), sa.ForeignKey("renewal_workflows.id", ondelete="CASCADE"), nullable=False),
@@ -47,7 +45,6 @@ def upgrade():
     )
     op.create_index("ix_renewal_reminders_renewal_id", "renewal_reminders", ["renewal_id"])
     op.create_index("ix_renewal_reminders_scheduled_at", "renewal_reminders", ["scheduled_at"])
-
     op.create_table("follow_up_tasks",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("lead_id", sa.String(36), sa.ForeignKey("leads.id", ondelete="CASCADE")),
@@ -68,7 +65,6 @@ def upgrade():
     op.create_index("ix_follow_up_tasks_agent_id", "follow_up_tasks", ["agent_id"])
     op.create_index("ix_follow_up_tasks_rm_id", "follow_up_tasks", ["rm_id"])
     op.create_index("ix_follow_up_tasks_due_at", "follow_up_tasks", ["due_at"])
-
     op.create_table("follow_up_events",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("task_id", sa.String(36), sa.ForeignKey("follow_up_tasks.id", ondelete="CASCADE"), nullable=False),
@@ -79,7 +75,6 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
     op.create_index("ix_follow_up_events_task_id", "follow_up_events", ["task_id"])
-
 
 def downgrade():
     op.drop_index("ix_follow_up_events_task_id", table_name="follow_up_events")
