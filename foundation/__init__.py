@@ -1,10 +1,12 @@
-"""PartnersHub AI P0 foundation package.
-
-This package is intentionally isolated from the existing Priya AI application so
-that the current production behavior remains intact while the platform gains a
-persistent data/auth foundation incrementally.
-"""
+"""PartnersHub AI foundation package."""
 
 from .bootstrap import register_foundation
+from .domain_routes import bp as domain_bp
 
-__all__ = ["register_foundation"]
+
+def register_p1_domains(app):
+    app.register_blueprint(domain_bp)
+    return app
+
+
+__all__ = ["register_foundation", "register_p1_domains"]
