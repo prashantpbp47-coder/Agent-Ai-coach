@@ -1,0 +1,80 @@
+name: P18 Runtime Smoke
+
+on:
+  push:
+    branches:
+      - agent/p18-campaign-automation
+  pull_request:
+    branches:
+      - agent/p18-campaign-automation
+  workflow_dispatch:
+
+jobs:
+  p18-smoke:
+    runs-on: ubuntu-latest
+    env:
+      FLASK_ENV: testing
+      SECRET_KEY: smoke-test-only
+      JWT_SECRET_KEY: smoke-test-jwt-secret-012345678901234567890123
+      DATABASE_URL: sqlite:///partnershub_p18_smoke.db
+      OPENAI_API_KEY: ""
+      DEEPSEEK_API_KEY: ""
+      AI_PROVIDER: openai
+      AI_FALLBACK_PROVIDER: deepseek
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+      - name: Import and route smoke
+        run: |
+          python - <<'PY'
+          import traceback
+          try:
+              import p0_runtime
+              app = p0_runtime.app
+              rules = {r.rule for r in app.url_map.iter_rules()}
+              required = {
+                  "/api/p18/campaigns",
+                  "/api/p18/inbox-actions",
+              }
+              missing = sorted(required - rules)
+              assert not missing, missing
+              print("P18 runtime import and route registration: PASS")
+          except Exception:
+              traceback.print_exc()
+              raise
+          PY
+      - name: P18 helper smoke
+        run: |
+          python - <<'PY'
+          from foundation.p18_routes import render
+          class AgentStub:
+              name = "Smoke Agent"
+              partner_code = "SMOKE001"
+          text = render("Hello {{agent_name}} {{partner_code}}", AgentStub())
+          assert text == "Hello Smoke Agent SMOKE001"
+          print("P18 template rendering: PASS")
+          PY
+      - name: Start Gunicorn
+        run: |
+          nohup gunicorn --bind 127.0.0.1:8080 --workers 1 --timeout 30 p0_runtime:app > /tmp/p18-gunicorn.log 2>&1 &
+          echo $! > /tmp/p18-gunicorn.pid
+          for i in $(seq 1 30); do
+            code=$(curl --silent --output /dev/null --write-out "%{http_code}" http://127.0.0.1:8080/api/p18/campaigns || true)
+            if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+              echo "P18 protected route live: PASS ($code)"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/p18-gunicorn.log
+          exit 1
+      - name: Stop Gunicorn
+        if: always()
+        run: |
+          if [ -f /tmp/p18-gunicorn.pid ]; then kill $(cat /tmp/p18-gunicorn.pid) || true; fi
