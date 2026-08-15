@@ -5,8 +5,8 @@ import uuid
 from flask import Blueprint, jsonify, request
 from sqlalchemy import func, select
 from .db import db
-from .models import Agent, BusinessEvent, AuditLog, RM
-from .models_p4 import AgentContact, AgentDailyActivity, BusinessReconciliation
+from .models import Agent, AuditLog, RM
+from .models_p4 import BusinessEvent, AgentContact, AgentDailyActivity, BusinessReconciliation
 from .models_p13 import ExternalBusinessImport, BusinessReconciliationRun, BusinessReconciliationDetail, RMDailyReportSnapshot
 from .security import current_user, require_role
 
@@ -95,7 +95,7 @@ def reconciliation_list():
 @bp.post("/daily-report")
 @require_role("RM","MASTER_AGENT","ADMIN")
 def daily_report():
-    rm_id=scope(); d=date.fromisoformat((request.get_json(silent=True) or {}).get("date")) if (request.get_json(silent=True) or {}).get("date") else today()
+    rm_id=scope(); payload=request.get_json(silent=True) or {}; d=date.fromisoformat(payload.get("date")) if payload.get("date") else today()
     if not rm_id:return jsonify({"error":"rm_mapping_required"}),422
     sys_total,_,_=system_totals(rm_id,d)
     active=db.session.scalar(select(func.count()).select_from(AgentDailyActivity).where(AgentDailyActivity.rm_id==rm_id,AgentDailyActivity.activity_date==d,AgentDailyActivity.active_today.is_(True))) or 0
