@@ -5,8 +5,9 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy import select
 
 from .db import db
-from .models import Agent, BusinessEvent, User
-from .models_p14 import AgentNBARecommendation, AgentTargetEvent, AgentTargetPlan, ClubTargetRule, UserAgentLink, UserRMLink
+from .models import Agent, User
+from .models_p4 import BusinessEvent
+from .models_p14 import AgentNBARecommendation, AgentTargetEvent, AgentTargetPlan, ClubTargetRule, UserAgentLink, UserRMLLink
 from .security import current_user, require_auth, require_role
 
 bp = Blueprint("p14_adaptive_targets", __name__, url_prefix="/api/p14")
