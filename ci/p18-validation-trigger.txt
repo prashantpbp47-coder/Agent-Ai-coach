@@ -1,0 +1,2 @@
+P18 CI validation trigger marker.
+This file is intentionally inert and exists only to trigger GitHub Actions validation against the latest P18 commit. It contains no application logic, secrets, credentials, or customer data.
