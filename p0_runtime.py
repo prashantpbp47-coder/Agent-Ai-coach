@@ -21,9 +21,10 @@ from foundation import (
     register_p16_ai_provider,
     register_p17_priya_messaging,
     register_p18_campaign_automation,
+    register_p19_knowledge,
 )
 
-# Preserve legacy routes and add the authenticated P0-P18 platform APIs.
+# Preserve legacy routes and add the authenticated P0-P19 platform APIs.
 app = register_foundation(legacy_app)
 app = register_p1_domains(app)
 app = register_p2_quote_bridge(app)
@@ -43,6 +44,7 @@ app = register_p15_priya_ai(app)
 app = register_p16_ai_provider(app)
 app = register_p17_priya_messaging(app)
 app = register_p18_campaign_automation(app)
+app = register_p19_knowledge(app)
 
 
 @app.get('/r/<slug>')
