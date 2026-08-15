@@ -1,13 +1,18 @@
-"""Merge repaired legacy P7 branch with the main P18 chain.
+"""Merge repaired legacy migration branches before P19.
 
-This is a no-op data/schema migration. It exists only to make the
-historical migration graph explicit after correcting broken dependency
-references in P7 and P10. No existing migration is deleted or renamed.
+This is a no-op schema migration. It explicitly joins the surviving
+P7 branch and the P11 branch with the main P18 chain after repairing
+broken historical dependency references. No existing migration is
+renamed or deleted.
 """
 from alembic import op
 
 revision = "0012_migration_graph_repair"
-down_revision = ("0011_p18_campaign_automation", "0004_p7")
+down_revision = (
+    "0011_p18_campaign_automation",
+    "0006_p11_automation_bi",
+    "0004_p7",
+)
 branch_labels = None
 depends_on = None
 
