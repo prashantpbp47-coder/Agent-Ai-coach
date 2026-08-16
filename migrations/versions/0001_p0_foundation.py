@@ -3,13 +3,11 @@
 Revision ID: 0001_p0_foundation
 Revises:
 
-The runtime imports the complete model set before Alembic starts.  The
-original implementation used ``db.metadata.create_all()`` which therefore
-pre-created P4-P19 tables and caused later migrations to collide with already
-existing objects on a fresh database.
-
-P0 owns only the stable core tables below.  Later migrations own their own
-module tables and may safely create them when their revision runs.
+The runtime imports the complete model set before Alembic starts. The legacy
+implementation called ``metadata.create_all()`` against the complete
+metadata and therefore pre-created later P4-P19 tables. P0 now owns only the
+stable core tables and creates them one-by-one so SQLAlchemy cannot pull in
+unrelated tables through metadata traversal.
 """
 
 from alembic import op
@@ -22,9 +20,6 @@ branch_labels = None
 depends_on = None
 
 
-# Tables that belong to the original platform foundation.  Future-module
-# tables are deliberately excluded so their Alembic revisions remain the
-# single owner of those schema objects.
 P0_CORE_TABLES = (
     "users",
     "roles",
@@ -46,20 +41,15 @@ P0_CORE_TABLES = (
 
 def upgrade():
     bind = op.get_bind()
-    tables = [
-        db.metadata.tables[name]
-        for name in P0_CORE_TABLES
-        if name in db.metadata.tables
-    ]
-    db.metadata.create_all(bind=bind, tables=tables, checkfirst=True)
+    for name in P0_CORE_TABLES:
+        table = db.metadata.tables.get(name)
+        if table is not None:
+            table.create(bind=bind, checkfirst=True)
 
 
 def downgrade():
     bind = op.get_bind()
-    tables = [
-        db.metadata.tables[name]
-        for name in reversed(P0_CORE_TABLES)
-        if name in db.metadata.tables
-    ]
-    for table in tables:
-        table.drop(bind=bind, checkfirst=True)
+    for name in reversed(P0_CORE_TABLES):
+        table = db.metadata.tables.get(name)
+        if table is not None:
+            table.drop(bind=bind, checkfirst=True)
