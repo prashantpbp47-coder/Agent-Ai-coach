@@ -31,7 +31,12 @@ with app.app_context():
     db.create_all()
     user = db.session.execute(db.select(User).filter_by(email="p13-smoke@example.com")).scalar_one_or_none()
     if not user:
-        user = User(email="p13-smoke@example.com", password_hash=hash_password("smoke-password"), is_active=True)
+        user = User(
+            email="p13-smoke@example.com",
+            password_hash=hash_password("smoke-password"),
+            full_name="P13 Smoke Administrator",
+            is_active=True,
+        )
         db.session.add(user)
         db.session.flush()
     role = db.session.execute(db.select(Role).filter_by(name="ADMIN")).scalar_one_or_none()
