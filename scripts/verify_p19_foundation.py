@@ -4,7 +4,7 @@
 Runs after migrations and verifies:
 - application imports and route registration
 - required P19 tables exist
-- Alembic is at the P19 head
+- Alembic is at the current operational head
 - P19 health/search endpoints respond without external provider calls
 
 The verifier deliberately normalizes relative SQLite paths before importing
@@ -21,6 +21,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+EXPECTED_HEAD = "0014_p13_operational_data"
 
 
 def check(condition: bool, message: str) -> None:
@@ -54,8 +56,6 @@ def main() -> int:
     )
     check(db_path.exists(), f"database not found: {db_path}")
 
-    # Import only after DATABASE_URL has been normalized, because
-    # register_foundation() initializes Flask-SQLAlchemy from that setting.
     import p0_runtime
 
     app = p0_runtime.app
@@ -81,11 +81,10 @@ def main() -> int:
             for row in conn.execute("select version_num from alembic_version")
         }
         check(
-            versions == {"0013_p19_knowledge_base"},
+            versions == {EXPECTED_HEAD},
             f"unexpected migration versions: {sorted(versions)}",
         )
 
-    # Flask test client avoids external network connections and provider calls.
     with app.test_client() as client:
         health = client.get("/api/p19/health")
         check(
@@ -97,10 +96,14 @@ def main() -> int:
             search.status_code < 500,
             f"P19 search returned {search.status_code}: {search.get_data(as_text=True)}",
         )
+        # Admin knowledge-management endpoints must remain protected.
+        sources = client.get("/api/p19/sources")
+        check(sources.status_code == 401, f"P19 admin endpoint is not protected: {sources.status_code}")
 
     print("P19 FOUNDATION VERIFICATION: PASS")
     print("Routes: /api/p19/health, /api/p19/search")
-    print("Migration: 0013_p19_knowledge_base")
+    print("Admin protection: /api/p19/sources -> 401 without token")
+    print(f"Migration head: {EXPECTED_HEAD}")
     print(f"Database: {db_path}")
     return 0
 
