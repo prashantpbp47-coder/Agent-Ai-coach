@@ -7,8 +7,8 @@ Runs after migrations and verifies:
 - Alembic is at the P19 head
 - P19 health/search endpoints respond without external provider calls
 
-The script is safe for CI: it uses the repository root explicitly and does
-not require real OpenAI/DeepSeek credentials or send external messages.
+The verifier deliberately normalizes relative SQLite paths before importing
+Flask so the SQLAlchemy engine and direct schema inspection use the same DB.
 """
 from __future__ import annotations
 
@@ -18,9 +18,6 @@ import sys
 from pathlib import Path
 
 
-# ``python scripts/verify_p19_foundation.py`` sets sys.path[0] to /scripts.
-# Add the repository root explicitly so p0_runtime and foundation resolve
-# consistently in CI, local shells, and deployment containers.
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -31,16 +28,34 @@ def check(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
-def sqlite_path(database_url: str) -> Path | None:
+def normalize_database_url() -> tuple[str, Path | None]:
+    database_url = os.getenv(
+        "DATABASE_URL",
+        "sqlite:///partnershub_p19_foundation.db",
+    )
     prefix = "sqlite:///"
-    if database_url.startswith(prefix):
-        raw = database_url[len(prefix):]
-        path = Path(raw)
-        return path if path.is_absolute() else ROOT / path
-    return None
+    if not database_url.startswith(prefix):
+        return database_url, None
+
+    raw = database_url[len(prefix):]
+    path = Path(raw)
+    if not path.is_absolute():
+        path = ROOT / path
+        database_url = f"sqlite:///{path}"
+        os.environ["DATABASE_URL"] = database_url
+    return database_url, path
 
 
 def main() -> int:
+    database_url, db_path = normalize_database_url()
+    check(
+        db_path is not None,
+        f"P19 smoke verifier currently supports SQLite only: {database_url}",
+    )
+    check(db_path.exists(), f"database not found: {db_path}")
+
+    # Import only after DATABASE_URL has been normalized, because
+    # register_foundation() initializes Flask-SQLAlchemy from that setting.
     import p0_runtime
 
     app = p0_runtime.app
@@ -51,18 +66,7 @@ def main() -> int:
             f"missing route: {route}",
         )
 
-    database_url = os.getenv(
-        "DATABASE_URL",
-        "sqlite:///partnershub_p19_foundation.db",
-    )
-    path = sqlite_path(database_url)
-    check(
-        path is not None,
-        f"verification script currently supports SQLite only: {database_url}",
-    )
-    check(path.exists(), f"database not found: {path}")
-
-    with sqlite3.connect(path) as conn:
+    with sqlite3.connect(db_path) as conn:
         tables = {
             row[0]
             for row in conn.execute(
@@ -97,6 +101,7 @@ def main() -> int:
     print("P19 FOUNDATION VERIFICATION: PASS")
     print("Routes: /api/p19/health, /api/p19/search")
     print("Migration: 0013_p19_knowledge_base")
+    print(f"Database: {db_path}")
     return 0
 
 
