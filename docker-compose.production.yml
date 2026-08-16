@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-partnershub}
+      POSTGRES_USER: ${POSTGRES_USER:-partnershub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - partnershub_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLASK_ENV: production
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-partnershub}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-partnershub}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      AI_FALLBACK_PROVIDER: ${AI_FALLBACK_PROVIDER:-deepseek}
+      INTERAKT_API_KEY: ${INTERAKT_API_KEY:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_API_KEY: ${TWILIO_API_KEY:-}
+      TWILIO_API_SECRET: ${TWILIO_API_SECRET:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      PRASHANT_NUMBER: ${PRASHANT_NUMBER:-}
+      PRASHANT_WHATSAPP: ${PRASHANT_WHATSAPP:-}
+      P13_IMPORT_MAX_BYTES: ${P13_IMPORT_MAX_BYTES:-10485760}
+      P13_IMPORT_MAX_ROWS: ${P13_IMPORT_MAX_ROWS:-10000}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    expose:
+      - "8000"
+
+volumes:
+  partnershub_pgdata:
