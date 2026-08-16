@@ -24,6 +24,8 @@ jobs:
       DEEPSEEK_API_KEY: ""
       AI_PROVIDER: openai
       AI_FALLBACK_PROVIDER: deepseek
+      P13_IMPORT_MAX_BYTES: "10485760"
+      P13_IMPORT_MAX_ROWS: "10000"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,9 +44,18 @@ jobs:
           import p0_runtime
           app = p0_runtime.app
           rules = {r.rule for r in app.url_map.iter_rules()}
-          for route in ("/api/p17", "/api/p18", "/api/p19/health", "/api/p19/search"):
+          required = (
+              "/api/p17",
+              "/api/p18",
+              "/api/p19/health",
+              "/api/p19/search",
+              "/api/p13/operational/import-file",
+              "/api/p13/operational/import-policy",
+              "/api/p20/whatsapp/health",
+          )
+          for route in required:
               assert any(r == route or r.startswith(route + "/") for r in rules), route
-          print("P0-P19 import and route registration: PASS")
+          print("P0-P20 import and route registration: PASS")
           PY
 
       - name: Gunicorn startup validation
@@ -67,23 +78,34 @@ jobs:
           rm -f partnershub_p19_foundation.db
           alembic upgrade head
 
-      - name: P19 database validation
+      - name: P19 and operational database validation
         run: |
           python - <<'PY'
           import sqlite3
           conn = sqlite3.connect("partnershub_p19_foundation.db")
           names = {row[0] for row in conn.execute("select name from sqlite_master where type='table'")}
-          required = {"knowledge_sources", "knowledge_entries", "alembic_version"}
+          required = {
+              "knowledge_sources",
+              "knowledge_entries",
+              "operational_data_records",
+              "whatsapp_sessions",
+              "whatsapp_events",
+              "whatsapp_quote_intents",
+              "alembic_version",
+          }
           missing = sorted(required - names)
           assert not missing, missing
           versions = [row[0] for row in conn.execute("select version_num from alembic_version")]
-          assert versions == ["0014_p13_operational_data"], versions
-          print("Fresh migration and P19 schema: PASS")
+          assert versions == ["0015_p20_whatsapp_one_shot"], versions
+          print("Fresh migration, P19 schema and P13/P20 schema: PASS")
           conn.close()
           PY
 
       - name: P19 foundation smoke verification
         run: python scripts/verify_p19_foundation.py
+
+      - name: Operational report file ingestion smoke verification
+        run: python scripts/verify_operational_file_ingest.py
 
       - name: Production foundation runtime certification
         run: |
@@ -100,6 +122,8 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:8100/api/p19/health
           echo
           curl --fail --silent --show-error "http://127.0.0.1:8100/api/p19/search?q=test"
+          echo
+          curl --fail --silent --show-error http://127.0.0.1:8100/api/p20/whatsapp/health
           echo
           echo "PRODUCTION FOUNDATION: PASS"
           cat /tmp/production-foundation.log
