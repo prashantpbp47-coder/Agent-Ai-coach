@@ -15,7 +15,7 @@ from sqlalchemy import select
 from .db import db
 from .models_p13 import OperationalDataRecord
 from .p13_routes import _normalize_operational_row, audit, scope
-from .security import current_user, require_role
+from .security import current_user, require_role, user_has_role
 from .models import new_id
 
 bp = Blueprint("p13_file_ingest", __name__, url_prefix="/api/p13")
@@ -64,11 +64,23 @@ def _load_rows(file_storage, extension: str) -> list[dict]:
     return rows
 
 
+def _is_admin() -> bool:
+    user = current_user()
+    return bool(user and user_has_role(user, "ADMIN"))
+
+
+def _import_rm_scope() -> str | None:
+    """Return RM ownership for scoped users; allow ADMIN to import enterprise-wide."""
+    if _is_admin():
+        return (request.form.get("rm_id") or request.args.get("rm_id") or "").strip() or None
+    return scope()
+
+
 @bp.post("/operational/import-file")
 @require_role("RM", "MASTER_AGENT", "ADMIN")
 def import_operational_file():
-    rm_id = scope()
-    if not rm_id:
+    rm_id = _import_rm_scope()
+    if not rm_id and not _is_admin():
         return jsonify({"error": "rm_mapping_required"}), 422
 
     uploaded = request.files.get("file")
@@ -187,4 +199,6 @@ def import_policy():
         "raw_files_persisted": False,
         "deduplication": "sha256(source_type|source_name|canonical_row)",
         "recommended_first_step": "dry_run=true",
+        "admin_scope": "enterprise",
+        "rm_scope": "assigned_rm_only",
     })
