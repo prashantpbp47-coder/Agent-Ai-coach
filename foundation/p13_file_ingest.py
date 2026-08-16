@@ -15,7 +15,7 @@ from sqlalchemy import select
 from .db import db
 from .models_p13 import OperationalDataRecord
 from .p13_routes import _normalize_operational_row, audit, scope
-from .security import require_role
+from .security import current_user, require_role
 from .models import new_id
 
 bp = Blueprint("p13_file_ingest", __name__, url_prefix="/api/p13")
@@ -43,8 +43,6 @@ def _load_rows(file_storage, extension: str) -> list[dict]:
     if extension == ".csv":
         frame = pd.read_csv(io.BytesIO(raw), dtype=str, keep_default_na=False)
     else:
-        # data_only=True prevents formulas from being interpreted as formulas;
-        # this importer consumes stored cell values only.
         frame = pd.read_excel(io.BytesIO(raw), dtype=str, keep_default_na=False, engine="openpyxl")
 
     if frame.empty:
@@ -150,7 +148,7 @@ def import_operational_file():
             "preview": preview,
         })
 
-    user = getattr(request, "current_user", None)
+    user = current_user()
     created = 0
     try:
         for row in new_rows:
