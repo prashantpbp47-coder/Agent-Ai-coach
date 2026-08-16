@@ -16,10 +16,11 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY . .
 
-RUN useradd --create-home --uid 10001 appuser \
+RUN chmod +x deploy/entrypoint.sh \
+    && useradd --create-home --uid 10001 appuser \
     && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
 
-CMD ["gunicorn", "--config", "deploy/gunicorn.conf.py", "wsgi:app"]
+ENTRYPOINT ["deploy/entrypoint.sh"]
