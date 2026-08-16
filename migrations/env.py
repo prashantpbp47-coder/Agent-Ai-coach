@@ -6,7 +6,7 @@ from sqlalchemy import engine_from_config, pool
 
 from foundation.db import db
 from foundation import models  # noqa: F401 - registers base metadata models
-from foundation import models_p4, models_p5, models_p6, models_p7, models_p8, models_p9, models_p10, models_p11, models_p12, models_p13, models_p14, models_p15, models_p16, models_p18  # noqa: F401
+from foundation import models_p4, models_p5, models_p6, models_p7, models_p8, models_p9, models_p10, models_p11, models_p12, models_p13, models_p14, models_p15, models_p16, models_p18, models_p20  # noqa: F401
 from foundation import p19_knowledge  # noqa: F401 - registers P19 knowledge metadata
 
 config = context.config
