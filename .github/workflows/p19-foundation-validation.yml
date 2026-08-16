@@ -53,7 +53,7 @@ jobs:
       - name: Migration graph validation
         run: |
           alembic heads
-          alembic history -n 30
+          alembic history
       - name: Fresh database migration
         run: |
           rm -f partnershub_p19_foundation.db
