@@ -3,7 +3,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "0013_p19_knowledge_base"
-down_revision = "0012_migration_graph_repair"
+down_revision = ("0012_migration_graph_repair", "0003_p5_rm_visits_referrals")
 branch_labels = None
 depends_on = None
 
