@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Deterministic P19 foundation smoke verification.
+"""Deterministic foundation smoke verification.
 
 Runs after migrations and verifies:
 - application imports and route registration
 - required P19 tables exist
 - Alembic is at the current operational head
 - P19 health/search endpoints respond without external provider calls
+- P19 admin knowledge endpoints remain protected
 
 The verifier deliberately normalizes relative SQLite paths before importing
 Flask so the SQLAlchemy engine and direct schema inspection use the same DB.
@@ -22,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-EXPECTED_HEAD = "0014_p13_operational_data"
+EXPECTED_HEAD = "0015_p20_whatsapp_one_shot"
 
 
 def check(condition: bool, message: str) -> None:
@@ -52,7 +53,7 @@ def main() -> int:
     database_url, db_path = normalize_database_url()
     check(
         db_path is not None,
-        f"P19 smoke verifier currently supports SQLite only: {database_url}",
+        f"Foundation smoke verifier currently supports SQLite only: {database_url}",
     )
     check(db_path.exists(), f"database not found: {db_path}")
 
@@ -98,9 +99,12 @@ def main() -> int:
         )
         # Admin knowledge-management endpoints must remain protected.
         sources = client.get("/api/p19/sources")
-        check(sources.status_code == 401, f"P19 admin endpoint is not protected: {sources.status_code}")
+        check(
+            sources.status_code == 401,
+            f"P19 admin endpoint is not protected: {sources.status_code}",
+        )
 
-    print("P19 FOUNDATION VERIFICATION: PASS")
+    print("FOUNDATION VERIFICATION: PASS")
     print("Routes: /api/p19/health, /api/p19/search")
     print("Admin protection: /api/p19/sources -> 401 without token")
     print(f"Migration head: {EXPECTED_HEAD}")
@@ -112,5 +116,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as exc:
-        print(f"P19 FOUNDATION VERIFICATION: FAIL — {exc}", file=sys.stderr)
+        print(f"FOUNDATION VERIFICATION: FAIL — {exc}", file=sys.stderr)
         raise
