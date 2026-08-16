@@ -3,10 +3,12 @@ name: P19 Foundation Validation
 on:
   push:
     branches:
+      - main
       - agent/p19-fix-p11-import
       - agent/p19-knowledge-base
   pull_request:
     branches:
+      - main
       - agent/p19-knowledge-base
   workflow_dispatch:
 
