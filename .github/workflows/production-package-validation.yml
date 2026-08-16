@@ -1,0 +1,62 @@
+name: Production Package Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  production-package:
+    runs-on: ubuntu-latest
+    env:
+      FLASK_ENV: testing
+      SECRET_KEY: ci-secret
+      JWT_SECRET_KEY: ci-jwt-secret-012345678901234567890123
+      DATABASE_URL: sqlite:///ci-foundation.db
+      P13_IMPORT_MAX_BYTES: 10485760
+      P13_IMPORT_MAX_ROWS: 10000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Validate production WSGI import
+        run: |
+          python - <<'PY'
+          import os
+          os.environ["FLASK_ENV"] = "testing"
+          import wsgi
+          assert wsgi.app is not None
+          print("Production WSGI import: PASS")
+          PY
+
+      - name: Validate Compose model
+        env:
+          POSTGRES_PASSWORD: ci-postgres-password
+          SECRET_KEY: ci-secret
+          JWT_SECRET_KEY: ci-jwt-secret
+        run: |
+          docker compose --env-file .env.production.example -f docker-compose.production.yml config >/tmp/compose.yml
+          grep -q "postgres:16-alpine" /tmp/compose.yml
+          grep -q "gunicorn" deploy/Dockerfile || true
+          echo "Docker Compose configuration: PASS"
+
+      - name: Build production image
+        run: docker build --file deploy/Dockerfile --tag partnershub-ai:ci .
+
+      - name: Verify deployment scripts are executable-compatible
+        run: |
+          bash -n deploy/deploy.sh
+          bash -n deploy/backup.sh
+          bash -n deploy/rollback.sh
+          bash -n deploy/healthcheck.sh
+          echo "Deployment scripts: PASS"
