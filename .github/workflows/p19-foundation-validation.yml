@@ -72,3 +72,4 @@ jobs:
           print("Fresh migration and P19 schema: PASS")
           conn.close()
           PY
+      # Triggered from the latest P19 foundation tree; no production providers are called.
