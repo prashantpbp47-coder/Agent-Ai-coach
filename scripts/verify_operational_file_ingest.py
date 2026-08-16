@@ -29,7 +29,18 @@ assert "/api/p13/operational/import-policy" in rules
 
 with app.app_context():
     db.create_all()
-    user = db.session.execute(db.select(User).filter_by(email="p13-smoke@example.com")).scalar_one_or_none()
+
+    role = db.session.execute(
+        db.select(Role).filter_by(name="ADMIN")
+    ).scalar_one_or_none()
+    if role is None:
+        role = Role(name="ADMIN", description="Smoke-test administrator")
+        db.session.add(role)
+        db.session.flush()
+
+    user = db.session.execute(
+        db.select(User).filter_by(email="p13-smoke@example.com")
+    ).scalar_one_or_none()
     if not user:
         user = User(
             email="p13-smoke@example.com",
@@ -39,8 +50,8 @@ with app.app_context():
         )
         db.session.add(user)
         db.session.flush()
-    role = db.session.execute(db.select(Role).filter_by(name="ADMIN")).scalar_one_or_none()
-    if role and role not in user.roles:
+
+    if role not in user.roles:
         user.roles.append(role)
     db.session.commit()
     token = issue_token(user)
@@ -52,6 +63,7 @@ csv_data = (
 
 with app.test_client() as client:
     headers = {"Authorization": f"Bearer {token}"}
+
     policy = client.get("/api/p13/operational/import-policy", headers=headers)
     assert policy.status_code == 200, policy.get_data(as_text=True)
     body = policy.get_json()
