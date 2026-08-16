@@ -1,0 +1,42 @@
+name: Deploy to Hostinger VPS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: ${{ secrets.HOSTINGER_API_KEY != '' && vars.HOSTINGER_VM_ID != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Hostinger VPS
+        uses: hostinger/deploy-on-vps@v2
+        with:
+          api-key: ${{ secrets.HOSTINGER_API_KEY }}
+          virtual-machine: ${{ vars.HOSTINGER_VM_ID }}
+          project-name: partnershub-ai
+          docker-compose-path: docker-compose.production.yml
+          environment-variables: |
+            FLASK_ENV=production
+            PUBLIC_BASE_URL=${{ vars.PUBLIC_BASE_URL }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}
+            AI_PROVIDER=${{ vars.AI_PROVIDER }}
+            AI_FALLBACK_PROVIDER=${{ vars.AI_FALLBACK_PROVIDER }}
+            INTERAKT_API_KEY=${{ secrets.INTERAKT_API_KEY }}
+            TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}
+            TWILIO_API_KEY=${{ secrets.TWILIO_API_KEY }}
+            TWILIO_API_SECRET=${{ secrets.TWILIO_API_SECRET }}
+            TWILIO_FROM_NUMBER=${{ secrets.TWILIO_FROM_NUMBER }}
+            PRASHANT_NUMBER=${{ secrets.PRASHANT_NUMBER }}
+            PRASHANT_WHATSAPP=${{ secrets.PRASHANT_WHATSAPP }}
+            P13_IMPORT_MAX_BYTES=10485760
+            P13_IMPORT_MAX_ROWS=10000
+            GUNICORN_WORKERS=3
+            GUNICORN_THREADS=2
+            GUNICORN_TIMEOUT=120
+            GUNICORN_KEEPALIVE=5
