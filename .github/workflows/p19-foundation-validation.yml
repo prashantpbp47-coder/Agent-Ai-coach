@@ -75,7 +75,7 @@ jobs:
           missing = sorted(required - names)
           assert not missing, missing
           versions = [row[0] for row in conn.execute("select version_num from alembic_version")]
-          assert versions == ["0013_p19_knowledge_base"], versions
+          assert versions == ["0014_p13_operational_data"], versions
           print("Fresh migration and P19 schema: PASS")
           conn.close()
           PY
