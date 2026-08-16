@@ -71,12 +71,12 @@ jobs:
           import sqlite3
           conn = sqlite3.connect("partnershub_p19_foundation.db")
           names = {row[0] for row in conn.execute("select name from sqlite_master where type='table'")}
-          required = {"knowledge_sources", "knowledge_entries", "alembic_version"}
+          required = {"knowledge_sources", "knowledge_entries", "operational_data_records", "alembic_version"}
           missing = sorted(required - names)
           assert not missing, missing
           versions = [row[0] for row in conn.execute("select version_num from alembic_version")]
           assert versions == ["0014_p13_operational_data"], versions
-          print("Fresh migration and P19 schema: PASS")
+          print("Fresh migration, P19 schema and operational data schema: PASS")
           conn.close()
           PY
 
@@ -101,3 +101,6 @@ jobs:
           echo
           echo "PRODUCTION FOUNDATION: PASS"
           cat /tmp/production-foundation.log
+
+      - name: Operational data contract verification
+        run: python scripts/verify_operational_data.py
