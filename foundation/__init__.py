@@ -14,6 +14,7 @@ from .p10_routes import bp as p10_bp
 from .p11_routes import bp as p11_bp
 from .p12_routes import bp as p12_bp
 from .p13_routes import bp as p13_bp
+from .p13_file_ingest import bp as p13_file_ingest_bp
 from .p14_routes import bp as p14_bp
 from .p15_routes import bp as p15_bp
 from .p16_routes import bp as p16_bp
@@ -35,7 +36,7 @@ def register_p9_document_intelligence(app): app.register_blueprint(p9_bp); retur
 def register_p10_followup_renewal(app): app.register_blueprint(p10_bp); return app
 def register_p11_automation_bi(app): app.register_blueprint(p11_bp); return app
 def register_p12_clay_prospect_intelligence(app): app.register_blueprint(p12_bp); return app
-def register_p13_bi_reconciliation(app): app.register_blueprint(p13_bp); return app
+def register_p13_bi_reconciliation(app): app.register_blueprint(p13_bp); app.register_blueprint(p13_file_ingest_bp); return app
 def register_p14_adaptive_targets(app): app.register_blueprint(p14_bp); return app
 def register_p15_priya_ai(app): app.register_blueprint(p15_bp); return app
 def register_p16_ai_provider(app): app.register_blueprint(p16_bp); return app
