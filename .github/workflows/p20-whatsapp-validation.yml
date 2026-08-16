@@ -20,34 +20,58 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
       - name: Install dependencies
         run: python -m pip install --upgrade pip && pip install -r requirements.txt
+
       - name: Migration graph
-        run: alembic heads && alembic history -n 5
+        run: |
+          alembic heads
+          alembic history --verbose | head -n 120
+
       - name: Fresh migration
         run: |
           rm -f partnershub_p20_smoke.db
           alembic upgrade head
+
       - name: Verify current head and P20 tables
         run: |
           python - <<'PY'
           import sqlite3
+
           conn = sqlite3.connect("partnershub_p20_smoke.db")
-          tables = {r[0] for r in conn.execute("select name from sqlite_master where type='table'")}
-          required = {"whatsapp_sessions", "whatsapp_events", "whatsapp_quote_intents"}
+          tables = {
+              r[0]
+              for r in conn.execute(
+                  "select name from sqlite_master where type='table'"
+              )
+          }
+
+          required = {
+              "whatsapp_sessions",
+              "whatsapp_events",
+              "whatsapp_quote_intents",
+          }
           missing = sorted(required - tables)
           assert not missing, missing
-          version = conn.execute("select version_num from alembic_version").fetchall()
+
+          version = conn.execute(
+              "select version_num from alembic_version"
+          ).fetchall()
           assert version == [("0015_p20_whatsapp_one_shot",)], version
+
           print("P20 schema: PASS")
           conn.close()
           PY
+
       - name: P20 import and behavior smoke
         run: python scripts/verify_p20_whatsapp.py
+
       - name: Gunicorn startup
         run: |
           timeout 15s gunicorn --bind 127.0.0.1:8110 p0_runtime:app >/tmp/p20-gunicorn.log 2>&1 &
