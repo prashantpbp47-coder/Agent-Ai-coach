@@ -121,3 +121,38 @@ def agent_performance():
         events=db.session.execute(select(BusinessEvent).where(BusinessEvent.rm_id==rm_id,BusinessEvent.agent_id==a.id,BusinessEvent.business_date==d)).scalars().all()
         out.append({"agent_id":a.id,"partner_code":a.partner_code,"name":a.name,"premium":sum(e.premium for e in events),"policies":sum(e.policies for e in events),"categories":{c:sum(e.premium for e in events if e.category==c) for c in sorted({e.category for e in events})}})
     return jsonify({"date":str(d),"items":out})
+
+@bp.get("/command-center")
+@require_role("RM","MASTER_AGENT","ADMIN")
+def command_center():
+    """Management dashboard payload using existing P4/P13 operational data.
+
+    RM scope is enforced; the internal RM target is never returned to agent roles.
+    """
+    rm_id=scope(); d=date.fromisoformat(request.args.get("date")) if request.args.get("date") else today()
+    if not rm_id: return jsonify({"error":"rm_mapping_required"}),422
+    total, policies, bycat=system_totals(rm_id,d)
+    active=db.session.scalar(select(func.count()).select_from(AgentDailyActivity).where(AgentDailyActivity.rm_id==rm_id,AgentDailyActivity.activity_date==d,AgentDailyActivity.active_today.is_(True))) or 0
+    calls=db.session.scalar(select(func.count()).select_from(AgentContact).where(AgentContact.rm_id==rm_id,AgentContact.contact_date==d)) or 0
+    activities=db.session.execute(select(AgentDailyActivity).where(AgentDailyActivity.rm_id==rm_id,AgentDailyActivity.activity_date==d)).scalars().all()
+    projected=sum(x.projected_premium for x in activities)
+    agents=db.session.execute(select(Agent).where(Agent.rm_id==rm_id)).scalars().all()
+    partner_rows=[]
+    for a in agents:
+        events=db.session.execute(select(BusinessEvent).where(BusinessEvent.rm_id==rm_id,BusinessEvent.agent_id==a.id,BusinessEvent.business_date==d)).scalars().all()
+        premium=sum(e.premium for e in events); nops=sum(e.policies for e in events)
+        partner_rows.append({"partner_code":a.partner_code,"partner_name":a.name,"nop":nops,"net_premium":premium})
+    partner_rows.sort(key=lambda x:x["net_premium"], reverse=True)
+    return jsonify({
+        "date":str(d),
+        "kpis":{"actual_premium":total,"policies":policies,"active_partners":active,"calls":calls,"projected_premium":projected},
+        "internal_rm_target":500000,
+        "target_gap":max(500000-total,0),
+        "category_breakdown":bycat,
+        "partner_performance":partner_rows,
+        "next_best_actions":[
+            {"priority":"high","action":"Contact highest-value active partners first","count":sum(1 for x in partner_rows if x["net_premium"]>=10000)},
+            {"priority":"medium","action":"Complete daily partner calls","gap":max(20-calls,0)},
+            {"priority":"medium","action":"Review projected business before end of day","projected_premium":projected}
+        ]
+    })
