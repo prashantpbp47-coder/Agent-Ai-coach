@@ -5,9 +5,16 @@ on:
 
 jobs:
   deploy:
-    if: ${{ secrets.HOSTINGER_API_KEY != '' && vars.HOSTINGER_VM_ID != '' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Validate deployment configuration
+        env:
+          HOSTINGER_API_KEY: ${{ secrets.HOSTINGER_API_KEY }}
+          HOSTINGER_VM_ID: ${{ vars.HOSTINGER_VM_ID }}
+        run: |
+          test -n "$HOSTINGER_API_KEY" || { echo "Missing HOSTINGER_API_KEY GitHub secret"; exit 1; }
+          test -n "$HOSTINGER_VM_ID" || { echo "Missing HOSTINGER_VM_ID GitHub variable"; exit 1; }
+
       - name: Deploy to Hostinger VPS
         uses: hostinger/deploy-on-vps@v2
         with:
