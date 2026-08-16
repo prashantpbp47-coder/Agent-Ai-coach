@@ -2,13 +2,18 @@
 """P20 deterministic one-shot WhatsApp smoke test."""
 from __future__ import annotations
 
-import json
 import os
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 os.environ.setdefault("FLASK_ENV", "testing")
 os.environ.setdefault("SECRET_KEY", "p20-test-secret")
 os.environ.setdefault("JWT_SECRET_KEY", "p20-test-jwt-secret-012345678901234567890123")
-os.environ.setdefault("DATABASE_URL", "sqlite:///p20_smoke.db")
+os.environ.setdefault("DATABASE_URL", f"sqlite:///{ROOT / 'p20_smoke.db'}")
 os.environ.pop("WHATSAPP_WEBHOOK_SECRET", None)
 
 import p0_runtime
@@ -22,12 +27,12 @@ assert "/api/p20/whatsapp/intents" in rules
 assert "/api/p20/whatsapp/health" in rules
 
 parsed = _parse(
-    "Need renewal for MH15AB1234, customer name: Prashant Chandratre, email prashant@example.com, comprehensive zero dep, engine protect",
+    "Need renewal for MH15AB1234, customer name: Demo User, email demo@example.test, comprehensive zero dep, engine protect",
     {"rc_attached": True, "policy_attached": True},
     "919999999999",
 )
 assert parsed["vehicle_number"] == "MH15AB1234"
-assert parsed["email"] == "prashant@example.com"
+assert parsed["email"] == "demo@example.test"
 assert parsed["policy_type"] == "comprehensive_zero_dep"
 assert not _missing(parsed)
 
@@ -39,7 +44,7 @@ with app.app_context():
         json={
             "id": "p20-smoke-001",
             "from": "919999999999",
-            "text": "Need renewal for MH15AB1234, customer name: Prashant Chandratre, email prashant@example.com, comprehensive zero dep",
+            "text": "Need renewal for MH15AB1234, customer name: Demo User, email demo@example.test, comprehensive zero dep",
             "rc_attached": True,
             "policy_attached": True,
         },
