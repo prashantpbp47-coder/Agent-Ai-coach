@@ -104,6 +104,9 @@ jobs:
       - name: P19 foundation smoke verification
         run: python scripts/verify_p19_foundation.py
 
+      - name: P20 WhatsApp one-shot smoke verification
+        run: python scripts/verify_p20_whatsapp.py
+
       - name: Operational report file ingestion smoke verification
         run: python scripts/verify_operational_file_ingest.py
 
