@@ -1,0 +1,67 @@
+services:
+  - type: web
+    name: partnershub-ai
+    runtime: docker
+    plan: starter
+    region: singapore
+    dockerfilePath: ./deploy/Dockerfile
+    dockerContext: .
+    autoDeployTrigger: checksPass
+    healthCheckPath: /api/p19/health
+    preDeployCommand: alembic upgrade head
+    maxShutdownDelaySeconds: 120
+    domains:
+      - primeagent.store
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: partnershub-ai-db
+          property: connectionString
+      - key: PORT
+        value: "10000"
+      - key: GUNICORN_WORKERS
+        value: "2"
+      - key: GUNICORN_THREADS
+        value: "2"
+      - key: GUNICORN_TIMEOUT
+        value: "120"
+      - key: GUNICORN_KEEPALIVE
+        value: "5"
+      - key: P13_IMPORT_MAX_BYTES
+        value: "10485760"
+      - key: P13_IMPORT_MAX_ROWS
+        value: "10000"
+      - key: SECRET_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: AI_PROVIDER
+        sync: false
+      - key: AI_FALLBACK_PROVIDER
+        sync: false
+      - key: INTERAKT_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_API_KEY
+        sync: false
+      - key: TWILIO_API_SECRET
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: PRASHANT_NUMBER
+        sync: false
+      - key: PRASHANT_WHATSAPP
+        sync: false
+      - key: PUBLIC_BASE_URL
+        value: https://primeagent.store
+
+  - name: partnershub-ai-db
+    type: pserv
+    runtime: docker
