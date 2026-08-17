@@ -62,6 +62,12 @@ services:
       - key: PUBLIC_BASE_URL
         value: https://primeagent.store
 
+databases:
   - name: partnershub-ai-db
-    type: pserv
-    runtime: docker
+    plan: basic-1gb
+    region: singapore
+    postgresMajorVersion: "17"
+    databaseName: partnershub
+    user: partnershub
+    diskSizeGB: 15
+    storageAutoscalingEnabled: true
