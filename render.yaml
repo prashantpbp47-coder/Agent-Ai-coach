@@ -1,14 +1,13 @@
 services:
   - type: web
     name: partnershub-ai
-    runtime: docker
-    plan: starter
+    runtime: python
+    plan: free
     region: singapore
-    dockerfilePath: ./deploy/Dockerfile
-    dockerContext: .
+    buildCommand: ./render-build.sh
+    startCommand: gunicorn app:app --config deploy/gunicorn.conf.py
     autoDeployTrigger: checksPass
     healthCheckPath: /api/p19/health
-    preDeployCommand: alembic upgrade head
     maxShutdownDelaySeconds: 120
     domains:
       - primeagent.store
@@ -22,7 +21,7 @@ services:
       - key: PORT
         value: "10000"
       - key: GUNICORN_WORKERS
-        value: "2"
+        value: "1"
       - key: GUNICORN_THREADS
         value: "2"
       - key: GUNICORN_TIMEOUT
@@ -64,10 +63,8 @@ services:
 
 databases:
   - name: partnershub-ai-db
-    plan: basic-1gb
+    plan: free
     region: singapore
     postgresMajorVersion: "17"
     databaseName: partnershub
     user: partnershub
-    diskSizeGB: 15
-    storageAutoscalingEnabled: true
