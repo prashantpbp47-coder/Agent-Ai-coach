@@ -1,0 +1,23 @@
+services:
+  partnershub-ai:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+      DAILY_TARGET: "500000"
+      PBPARTNERS_URL: "https://www.pbpartners.com/"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      OPENAI_TEXT_MODEL: "${OPENAI_TEXT_MODEL:-gpt-4o-mini}"
+      INTERAKT_API_KEY: "${INTERAKT_API_KEY}"
+      INTERAKT_TEMPLATE_MARATHI: "${INTERAKT_TEMPLATE_MARATHI:-daily_motor_support_marathi}"
+      INTERAKT_TEMPLATE_HINDI: "${INTERAKT_TEMPLATE_HINDI:-daily_motor_support_hindi}"
+      FAST_LAUNCH_API_KEY: "${FAST_LAUNCH_API_KEY}"
+      GOOGLE_SHEET_URL: "${GOOGLE_SHEET_URL}"
+      TWILIO_ACCOUNT_SID: "${TWILIO_ACCOUNT_SID}"
+      TWILIO_API_KEY: "${TWILIO_API_KEY}"
+      TWILIO_API_SECRET: "${TWILIO_API_SECRET}"
+      TWILIO_FROM_NUMBER: "${TWILIO_FROM_NUMBER}"
+      PRASHANT_NUMBER: "${PRASHANT_NUMBER}"
+      PRASHANT_WHATSAPP: "${PRASHANT_WHATSAPP}"
