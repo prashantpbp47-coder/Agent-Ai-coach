@@ -8,7 +8,6 @@ services:
     startCommand: gunicorn app:app --config deploy/gunicorn.conf.py
     autoDeployTrigger: checksPass
     healthCheckPath: /api/p19/health
-    maxShutdownDelaySeconds: 120
     domains:
       - primeagent.store
     envVars:
